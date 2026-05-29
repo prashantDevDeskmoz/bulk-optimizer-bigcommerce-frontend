@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  allowedDevOrigins: ['bulkoptimizerfrontend1.shares.zrok.io'],
 };
 
 export default nextConfig;
