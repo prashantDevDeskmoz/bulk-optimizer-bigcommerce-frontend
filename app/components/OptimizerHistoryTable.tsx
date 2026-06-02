@@ -1,13 +1,11 @@
 "use client";
 
 import { getOptimizerHistory } from "@/utils/apis/globalApi";
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import DataTable, { type TableColumn } from "react-data-table-component";
 
 type OptimizerHistoryTableProps = {
   maxRows?: number;
-  showViewAll?: boolean;
 };
 
 type HistoryRow = Record<string, unknown> & {
@@ -134,18 +132,18 @@ function StatusBadge({ status }: { status: string }) {
 
   const tone =
     normalized === "done" || normalized === "completed"
-      ? "bg-[#cdfee1] text-[#0d5c2e]"
+      ? "badge-success"
       : normalized === "failed"
-        ? "bg-[#fde2e2] text-[#b42318]"
+        ? "badge-error"
         : normalized === "pending" ||
             normalized === "fetching" ||
             normalized === "updating"
-          ? "bg-[#fff3cd] text-[#8a6116]"
-          : "bg-[#f1f1f1] text-[#616161]";
+          ? "badge-warning"
+          : "";
 
   return (
     <span
-      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${tone}`}
+      className={`badge ${tone}`}
     >
       {label}
     </span>
@@ -221,7 +219,6 @@ const columns: TableColumn<HistoryRow>[] = [
 
 export default function OptimizerHistoryTable({
   maxRows,
-  showViewAll = false,
 }: OptimizerHistoryTableProps) {
   const [data, setData] = useState<HistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -267,13 +264,6 @@ export default function OptimizerHistoryTable({
           <p className="py-10 text-sm text-[#616161]">No optimizer history yet.</p>
         }
       />
-      {showViewAll && !loading && !error && (
-        <div className="flex justify-center border-t border-[#eeeeee] bg-white py-4">
-          <Link href="/optimizerHistory" className="btn-outline">
-            View All
-          </Link>
-        </div>
-      )}
     </div>
   );
 }

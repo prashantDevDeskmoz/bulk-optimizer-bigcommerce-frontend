@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "@heroui/styles";
 
 @config "../tailwind.config.js";
 
@@ -39,13 +40,15 @@ body {
 }
 
 .badge {
-  background: rgba(0, 0, 0, 0.06);
   color: #616161;
+  background: #0000000f;
+  border-radius: 8px;
+  height: 22px;
+  padding: 2px 8px;
+  font-size: 12px;
   font-weight: 500;
-  border-radius: 0.5rem;
-  font-size: 0.75rem;
-  min-height: 22px;
-  padding: 6px 8px;
+  display: flex;
+  align-items: center;
 }
 
 .badge-success {
@@ -54,13 +57,13 @@ body {
 }
 
 .badge-warning {
-  background: #fff3cd;
-  color: #333;
+  background: #ffd6a4;
+  color: #5e4200;
 }
 
 .badge-error {
-  background: #f8d7da;
-  color: #333;
+  background: #fed1d7;
+  color: #8e0b21;
 }
 
 .custom-dropi {
@@ -126,6 +129,7 @@ body {
   padding: 5px 12px;
   font-weight: 500;
   white-space: nowrap;
+  cursor: pointer;
 }
 
 .custom-btn {
@@ -144,6 +148,7 @@ body {
   background: #fff;
   border: 0.66px solid #8a8a8a;
   color: #303030;
+  cursor: pointer;
 }
 
 .btn-outline:disabled,
@@ -178,4 +183,34 @@ body {
 .custom-textarea .form-control:focus {
   box-shadow: none;
   outline: none;
+}
+
+.custom-input .form-control {
+  font-size: 12px;
+  font-weight: 400;
+  padding: 6px 13px;
+  background: #fdfdfd;
+  border: .66px solid #8a8a8a;
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  padding: .375rem .75rem;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #212529;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-clip: padding-box;
+  border-radius: 6px;
+  transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+}
+
+.custom-input .form-control:focus {
+    outline: none;
+    box-shadow: none;
+    border-color: #8a8a8a;
 }

@@ -21,6 +21,8 @@ import BulkOptimizerPreview, {
 import ChannelSelector from "../components/globalSelector";
 import OptimizerHistoryTable from "../components/OptimizerHistoryTable";
 import SeoTemplateTextarea from "../components/SeoTemplateTextarea";
+import Image from "next/image";
+import { Tooltip } from "@heroui/react";
 
 let PRODUCT_VARIABLES: { label: string; token: string }[] = [
   { label: "Product Name", token: "[[product name]]" },
@@ -565,13 +567,42 @@ export default function BulkOptimizerClient({
         </div>
 
         <div className="card p-0! mt-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between border-b border-[#DDDDDD] p-4">
-            <h2 className="text-base font-bold text-[#303030]">
-              Optimizer History
-            </h2>
+          <div className="flex justify-start lg:justify-between items-start md:items-center gap-3 flex-col md:flex-row border-b border-[#DDDDDD] p-4">
+            <div className="flex gap-2 flex-col xl:flex-row">
+              <h2 className="text-base font-bold text-[#303030]">
+                Optimizer History
+              </h2>
+              <span className="badge badge-success whitespace-normal">No pending queue</span>
+            </div>
+            <div className="flex gap-2 flex-col xl:flex-row xl:items-center">
+              <Tooltip delay={0}>
+                <Tooltip.Trigger
+                  aria-label="Refresh history"
+                  className="custom-btn flex h-[28px] w-[28px] shrink-0 items-center justify-center p-0! border-0"
+                >
+                  <Image src="/images/refresh-icon.svg" alt="" width={20} height={20} />
+                </Tooltip.Trigger>
+                <Tooltip.Content placement="top" showArrow>
+                  <Tooltip.Arrow />
+                  <p>Refresh history</p>
+                </Tooltip.Content>
+              </Tooltip>
+
+              <div className="custom-input">
+                <input
+                  type="text"
+                  placeholder="Item Type / Update Type"
+                  className="form-control"
+                />
+              </div>
+
+              <Link href="/optimizerHistory" className="btn-outline shrink-0">
+                View All History
+              </Link>
+            </div>
           </div>
           <div className="p-4">
-            <OptimizerHistoryTable maxRows={5} showViewAll />
+            <OptimizerHistoryTable maxRows={5} />
           </div>
         </div>
       </main>
