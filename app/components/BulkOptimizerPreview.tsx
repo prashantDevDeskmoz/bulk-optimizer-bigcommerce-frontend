@@ -7,7 +7,7 @@ import {
   mapCategoryToSampleTokens,
   mapProductToSampleTokens,
 } from "@/utils/channelPreviewCache";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 
 export type SeoTab = "title" | "meta" | "alt";
 
@@ -25,15 +25,13 @@ const BASE_SAMPLE_VALUES: Record<string, string> = {
   "[[name]]": "Acme",
 };
 
-const CURRENT_PAGE_TITLE = (tab: string) => 
+const CURRENT_PAGE_TITLE = (tab: string) =>
   `This is a very long existing ${tab} that demonstrates how the current product, category or brand ${tab} might look in the store before optimization — including extra marketing copy and keywords that push the length higher.`;
 
-type ProductWithImages = Record<string, unknown> & {
-  images?: { description?: string }[];
-  custom_url?: { url?: string };
-};
-
-function applyTemplate(template: string, values: Record<string, string>): string {
+function applyTemplate(
+  template: string,
+  values: Record<string, string>,
+): string {
   let out = template;
   for (const [key, val] of Object.entries(values)) {
     out = out.split(key).join(val);
@@ -47,7 +45,13 @@ function tabFieldLabel(tab: SeoTab): string {
   return "Alt Text";
 }
 
-function currentValueForTab (tab: SeoTab,sampleValues: Record<string, string>) {
+function previewSubtitle(tab: SeoTab): string {
+  if (tab === "title") return "Preview optimized title appearance.";
+  if (tab === "meta") return "Preview optimized meta description appearance.";
+  return "Preview optimized alt text appearance.";
+}
+
+function currentValueForTab(tab: SeoTab, sampleValues: Record<string, string>) {
   const defaultDisplay = CURRENT_PAGE_TITLE(tabFieldLabel(tab));
   switch (tab) {
     case "title":
@@ -98,10 +102,6 @@ export default function BulkOptimizerPreview({
   const { selectedChannel } = useChannelContext();
   const channelPreview = useChannelPreviewSamples(selectedChannel?.id);
 
-  useEffect(() => {
-    console.log("channelPreview:::::::::::::::::::::::::::::::::::::", channelPreview);
-  }, [channelPreview]);
-
   const sampleUrl = useMemo(() => {
     const base = selectedChannel?.site_url ?? "";
     const path =
@@ -109,7 +109,10 @@ export default function BulkOptimizerPreview({
         ? channelPreview.product?.custom_url?.url
         : applyTo === "categories"
           ? channelPreview.category?.url?.path
-          : applyTo === "brands" ? (brandSample as any)?.custom_url?.url : null;
+          : applyTo === "brands"
+            ? (brandSample as { custom_url?: { url?: string } })?.custom_url
+              ?.url
+            : null;
     if (!base) return null;
     if (!path) return null;
     if (path.startsWith("http")) return path;
@@ -130,102 +133,95 @@ export default function BulkOptimizerPreview({
     return {
       ...BASE_SAMPLE_VALUES,
       "[[store name]]": storeName ?? BASE_SAMPLE_VALUES["[[store name]]"],
-      ...(applyTo === "products" ?
-         mapProductToSampleTokens(channelPreview.product as Parameters<typeof mapProductToSampleTokens>[0])
-        : applyTo === "categories" ?
-         mapCategoryToSampleTokens(channelPreview.category)
-        : applyTo === "brands" ?
-         mapBrandToSampleTokens(brandSample) : {}),
+      ...(applyTo === "products"
+        ? mapProductToSampleTokens(
+          channelPreview.product as Parameters<
+            typeof mapProductToSampleTokens
+          >[0],
+        )
+        : applyTo === "categories"
+          ? mapCategoryToSampleTokens(channelPreview.category)
+          : applyTo === "brands"
+            ? mapBrandToSampleTokens(brandSample)
+            : {}),
       "[[name]]": brandName,
     };
-  }, [storeName, channelPreview.product, channelPreview.category, applyTo, brandSample]);
+  }, [
+    storeName,
+    channelPreview.product,
+    channelPreview.category,
+    applyTo,
+    brandSample,
+  ]);
 
   const newPreview = useMemo(
     () => applyTemplate(template, sampleValues),
     [template, sampleValues],
   );
 
-  useEffect(() => {
-    console.log("sampleValues:::::::::::::::::::::::::::::::::::::", sampleValues);
-  }, [sampleValues]);
-
   const fieldLabel = tabFieldLabel(tab);
-  const currentDisplay = currentValueForTab(tab,sampleValues);
-  const loading = channelPreview.loading;                       
+  const currentDisplay = currentValueForTab(tab, sampleValues);
+  const loading = channelPreview.loading;
 
   return (
-    <section className="sticky top-30 rounded-3xl bg-white p-7 shadow-sm ring-1 ring-zinc-100">
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold">Live SEO Preview</h2>
-        <p className="mt-1 text-sm text-zinc-500">
-          Preview how your optimized content may appear on search engines.
-        </p>
+    <section className="card w-[486px] p-0!">
+      <div className="p-4 border-b border-[#DDDDDD]">
+        <h2 className="text-base font-bold text-[#303030]">Live SEO Preview</h2>
+        <p className="mt-0.5 text-xs text-[#616161]">{previewSubtitle(tab)}</p>
       </div>
 
-      <div className="mb-6 rounded-2xl border border-red-100 bg-red-50 p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-red-700">
+      <div className="flex flex-col gap-4 p-4">
+        <div className="rounded-lg border border-[#f5c2c7] bg-[#fff5f5] p-4">
+          <h3 className="mb-2 text-xs font-semibold text-[#d72c0d]">
             Current {fieldLabel}
           </h3>
+          <p className="h-[42px] overflow-y-auto overflow-x-hidden break-words text-sm leading-snug text-[#1a0dab]">
+            {loading ? "Loading..." : currentDisplay}
+          </p>
+          <p className="mt-1 text-xs text-[#188038]">
+            {loading ? (
+              "Loading..."
+            ) : (
+              sampleUrl && (
+                <a
+                  href={sampleUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-w-0 max-w-full items-center gap-1 break-all hover:underline"
+                >
+                  <IconExternalLink className="mt-0.5 shrink-0" />
+                  {sampleUrl}
+                </a>
+              )
+            )}
+          </p>
         </div>
 
-        <p className="text-lg text-blue-700">
-          {loading ? "Loading..." : currentDisplay}
-        </p>
-
-        <p className="mt-1 text-xs text-green-700">
-          {loading ? (
-            "Loading..."
-          ) : (
-            sampleUrl && <a
-              href={sampleUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex min-w-0 max-w-full items-center gap-1 break-all text-green-700 underline decoration-green-600/50 underline-offset-2 hover:text-green-800 hover:decoration-green-700"
-            >
-              <IconExternalLink className="mt-0.5 shrink-0" />
-              {sampleUrl}
-            </a>
-          )}
-        </p>
-
-        <p className="mt-3 text-sm leading-6 text-zinc-600">
-          Generic title with weak keyword targeting and low click-through
-          potential.
-        </p>
-      </div>
-
-      <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-emerald-700">
+        <div className="rounded-lg border border-[#b7ebc6] bg-[#f3fff6] p-4">
+          <h3 className="mb-2 text-xs font-semibold text-[#188038]">
             New {fieldLabel}
           </h3>
+          <p className="h-[42px] overflow-y-auto overflow-x-hidden break-words text-sm leading-snug text-[#1a0dab]">
+            {loading ? "Loading..." : newPreview || "—"}
+          </p>
+          <p className="mt-1 text-xs text-[#188038]">
+            {loading ? (
+              "Loading..."
+            ) : (
+              sampleUrl && (
+                <a
+                  href={sampleUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-w-0 max-w-full items-center gap-1 break-all hover:underline"
+                >
+                  <IconExternalLink className="mt-0.5 shrink-0" />
+                  {sampleUrl}
+                </a>
+              )
+            )}
+          </p>
         </div>
-
-        <p className="text-lg text-blue-700">
-          {loading ? "Loading..." : newPreview}
-        </p>
-
-        <p className="mt-1 text-xs text-green-700">
-          {loading ? (
-            "Loading..."
-          ) : (
-            sampleUrl && <a
-              href={sampleUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex min-w-0 max-w-full items-center gap-1 break-all text-green-700 underline decoration-green-600/50 underline-offset-2 hover:text-green-800 hover:decoration-green-700"
-            >
-              <IconExternalLink className="mt-0.5 shrink-0" />
-              {sampleUrl}
-            </a>
-          )}
-        </p>
-
-        <p className="mt-3 text-sm leading-6 text-zinc-600">
-          Improved keyword structure with clearer product intent and stronger
-          search visibility.
-        </p>
       </div>
     </section>
   );

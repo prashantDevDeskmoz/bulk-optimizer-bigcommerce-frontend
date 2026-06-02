@@ -2,13 +2,12 @@
 
 import {
   useCallback,
-  useMemo,
   useRef,
   type ChangeEvent,
   type KeyboardEvent,
   type MouseEvent,
-  type ReactNode,
   type RefObject,
+  type TextareaHTMLAttributes,
 } from "react";
 
 const TOKEN_PATTERN = /\[\[[^\]]+\]\]/g;
@@ -18,10 +17,6 @@ type TokenRange = {
   end: number;
   token: string;
 };
-
-function isTemplateToken(segment: string): boolean {
-  return segment.startsWith("[[") && segment.endsWith("]]");
-}
 
 function getTokenRanges(text: string): TokenRange[] {
   return [...text.matchAll(TOKEN_PATTERN)].map((match) => ({
@@ -85,66 +80,27 @@ function editPreservesTokens(previous: string, next: string): boolean {
   return true;
 }
 
-function splitTemplateSegments(text: string): string[] {
-  if (!text) return [""];
-
-  const segments: string[] = [];
-  let lastIndex = 0;
-
-  for (const match of text.matchAll(TOKEN_PATTERN)) {
-    const start = match.index ?? 0;
-    if (start > lastIndex) {
-      segments.push(text.slice(lastIndex, start));
-    }
-    segments.push(match[0]);
-    lastIndex = start + match[0].length;
-  }
-
-  if (lastIndex < text.length) {
-    segments.push(text.slice(lastIndex));
-  }
-
-  return segments.length > 0 ? segments : [""];
-}
-
-function renderHighlightedTemplate(text: string): ReactNode {
-  return splitTemplateSegments(text).map((segment, index) => {
-    if (isTemplateToken(segment)) {
-      return (
-        <span
-          key={`${index}-${segment}`}
-          className="rounded bg-indigo-100 text-indigo-800"
-        >
-          {segment}
-        </span>
-      );
-    }
-
-    return <span key={`${index}-${segment}`}>{segment}</span>;
-  });
-}
-
 type SeoTemplateTextareaProps = {
   value: string;
   onChange: (value: string) => void;
   textareaRef?: RefObject<HTMLTextAreaElement | null>;
-  rows?: number;
   placeholder?: string;
   className?: string;
-};
+} & Omit<
+  TextareaHTMLAttributes<HTMLTextAreaElement>,
+  "value" | "onChange" | "ref" | "className" | "placeholder" | "rows"
+>;
 
 export default function SeoTemplateTextarea({
   value,
   onChange,
   textareaRef,
-  rows = 6,
   placeholder,
   className = "",
+  ...rest
 }: SeoTemplateTextareaProps) {
   const localRef = useRef<HTMLTextAreaElement>(null);
   const inputRef = textareaRef ?? localRef;
-
-  const highlighted = useMemo(() => renderHighlightedTemplate(value), [value]);
 
   const applySelectionSnap = useCallback(() => {
     const el = inputRef.current;
@@ -208,7 +164,10 @@ export default function SeoTemplateTextarea({
 
       if (event.key === "Backspace") {
         for (const range of getTokenRanges(value)) {
-          if (cursor === range.end || (cursor > range.start && cursor < range.end)) {
+          if (
+            cursor === range.end ||
+            (cursor > range.start && cursor < range.end)
+          ) {
             event.preventDefault();
             onChange(removeToken(value, range));
             requestAnimationFrame(() => {
@@ -223,7 +182,10 @@ export default function SeoTemplateTextarea({
 
       if (event.key === "Delete") {
         for (const range of getTokenRanges(value)) {
-          if (cursor === range.start || (cursor > range.start && cursor < range.end)) {
+          if (
+            cursor === range.start ||
+            (cursor > range.start && cursor < range.end)
+          ) {
             event.preventDefault();
             onChange(removeToken(value, range));
             requestAnimationFrame(() => {
@@ -246,7 +208,12 @@ export default function SeoTemplateTextarea({
         return;
       }
 
-      if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      if (
+        event.key.length === 1 &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey
+      ) {
         if (interior) {
           event.preventDefault();
           applySelectionSnap();
@@ -258,38 +225,24 @@ export default function SeoTemplateTextarea({
 
   const handlePointerUp = useCallback(
     (event: MouseEvent<HTMLTextAreaElement>) => {
-      const el = event.currentTarget;
-      requestAnimationFrame(() => snapSelection(el, value));
+      requestAnimationFrame(() => snapSelection(event.currentTarget, value));
     },
     [value],
   );
 
   return (
-    <div className={`relative ${className}`}>
-      <div
-        aria-hidden
-        className="pointer-events-none min-h-[9.5rem] whitespace-pre-wrap break-words text-sm leading-7 text-zinc-800"
-      >
-        {value ? (
-          highlighted
-        ) : (
-          <span className="text-zinc-400">{placeholder}</span>
-        )}
-      </div>
-
-      <textarea
-        ref={inputRef}
-        value={value}
-        rows={rows}
-        spellCheck={false}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        onClick={handlePointerUp}
-        onSelect={applySelectionSnap}
-        onKeyUp={applySelectionSnap}
-        className="absolute inset-0 h-full w-full resize-y border-none bg-transparent text-sm leading-7 text-transparent caret-zinc-900 outline-none selection:bg-indigo-200/60"
-        placeholder={placeholder}
-      />
-    </div>
+    <textarea
+      ref={inputRef}
+      value={value}
+      spellCheck={false}
+      placeholder={placeholder}
+      onChange={handleChange}
+      onKeyDown={handleKeyDown}
+      onClick={handlePointerUp}
+      onSelect={applySelectionSnap}
+      onKeyUp={applySelectionSnap}
+      className={`form-control bg-[#FDFDFD] border-[#8A8A8A] h-[80px] w-full`}
+      {...rest}
+    />
   );
 }

@@ -1,17 +1,14 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google"
 import "./globals.css";
+import AppShell from "./components/AppShell";
 import { Providers } from "./providers";
-import {ToastContainer} from "react-toastify"
+import { ToastContainer } from "react-toastify";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const inter = Inter({
+  subsets: [],
+  weight: ["400", "500", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -27,9 +24,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased">
       <body
-        className={`min-h-full flex flex-col font-sans ${geistSans.variable} ${geistMono.variable}`}
+        className={`min-h-full flex flex-col font-sans ${inter.className}`}
       >
-        <Providers>{children}</Providers>
+        <Providers>
+          <AppShell>{children}</AppShell>
+        </Providers>
         <ToastContainer position="top-right" autoClose={3000} />
       </body>
     </html>

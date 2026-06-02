@@ -4,13 +4,13 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #303030;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
-    --foreground: #ededed;
+    --foreground: #303030;
   }
 }
 
@@ -49,8 +49,8 @@ body {
 }
 
 .badge-success {
-  background: #cdfee1;
-  color: #333;
+  background: #affebf;
+  color: #014b40;
 }
 
 .badge-warning {
@@ -61,4 +61,121 @@ body {
 .badge-error {
   background: #f8d7da;
   color: #333;
+}
+
+.custom-dropi {
+  position: relative;
+}
+
+.custom-dropi span {
+  z-index: 1;
+  background: #fff;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 500;
+  position: absolute;
+  top: -9px;
+  left: 9px;
+  display: flex;
+  align-items: center;
+}
+
+.dropiLabel {
+  background: linear-gradient(#F6F7FB, #fff) !important;
+  color: #616161 !important;
+}
+
+.link-iconDropi img {
+  margin-left: 2px;
+  width: 16px;
+  margin-top: -4px;
+}
+
+.custom-dropi select {
+  font-size: 12px;
+  font-weight: normal;
+  border: 0.66px solid #8a8a8a;
+  height: 32px;
+  padding: 5px 33px 5px 13px;
+  border-radius: 6px;
+  width: 100%;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: #fdfdfd;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  background-size: 16px 12px;
+}
+
+.custom-dropi select:focus {
+  outline: none;
+  box-shadow: none;
+  border-color: #8a8a8a;
+}
+
+.btn-primary, .custom-btn {
+  border-radius: 8px;
+  height: 28px;
+  color: #fff;
+  padding: 5px 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.custom-btn {
+  background: #3f3f3f;
+  box-shadow: inset 0 1px 0 0 #000,inset 0 0 0 1px #000,inset -2px 0 0 0 hsla(0,0%,100%,.2),inset 2px 0 0 0 hsla(0,0%,100%,.2),inset 1px 2px 0 0 hsla(0,0%,100%,.2);
+  font-size: 12px;
+}
+
+.btn-outline {
+  border-radius: 8px;
+  height: 28px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  background: #fff;
+  border: 0.66px solid #8a8a8a;
+  color: #303030;
+}
+
+.btn-outline:disabled,
+.custom-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+
+.card {
+  background-color: #fff;
+  border-radius: 12px;
+  text-decoration: none;
+  padding: 16px;
+  box-shadow: 0 2px 0 0 rgba(26,26,26,.07),inset 0 0 0 0 hsla(0,0%,80%,.5),inset 0 0 0 0 rgba(0,0,0,.17),inset 0 0 0 0 rgba(0,0,0,.13),inset 0 0 0 0 rgba(0,0,0,.13);
+}
+
+.custom-textarea {
+  position: relative;
+}
+
+.custom-textarea .form-control {
+  resize: none;
+  background: #fdfdfd;
+  border: .66px solid #8a8a8a;
+  height: 80px;
+  padding: 9px 33px 9px 13px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+
+.custom-textarea .form-control:focus {
+  box-shadow: none;
+  outline: none;
 }
