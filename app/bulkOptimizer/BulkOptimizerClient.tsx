@@ -1,18 +1,18 @@
 "use client";
 
 import { useChannelContext } from "@/context/ChannelContext";
-import { saveTemplate, updateCruiseControl } from "@/utils/apis/globalApi";
+import { getDashboardInfoApi, saveTemplate, updateBulkApi, updateCruiseControl } from "@/utils/apis/globalApi";
 import type { StoreInfo } from "@/utils/apis/storeApi";
 import { getAllProductAndSaveTemplate, getBrandTemplateCache, getCategoryTemplateCache, getProductTemplateCache, setBrandTemplateCache, setCategoryTemplateCache, setProductTemplateCache } from "@/utils/cacheTemplate";
+
 import {
   Clock,
-  HistoryIcon,
   Package,
   PieChart,
   Sparkles,
-  type LucideIcon,
+  type LucideIcon
 } from "lucide-react";
-import Link from "next/link";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import BulkOptimizerPreview, {
@@ -21,8 +21,6 @@ import BulkOptimizerPreview, {
 import ChannelSelector from "../components/globalSelector";
 import OptimizerHistoryTable from "../components/OptimizerHistoryTable";
 import SeoTemplateTextarea from "../components/SeoTemplateTextarea";
-import Image from "next/image";
-import { Tooltip } from "@heroui/react";
 
 let PRODUCT_VARIABLES: { label: string; token: string }[] = [
   { label: "Product Name", token: "[[product name]]" },
@@ -105,28 +103,32 @@ function IconChevronDown({ className }: { className?: string }) {
 type BulkOptimizerClientProps = {
   initialStoreInfo: StoreInfo | null;
   allInitialTemplates: any[];
+  dashboardInfo: any[] | null;
 };
 
-const STAT_CARDS: {
-  label: string;
-  value: string;
-  icon: LucideIcon;
-}[] = [
-    { label: "Products", value: "1,248", icon: Package },
-    { label: "Optimized", value: "87%", icon: Sparkles },
-    { label: "Queue", value: "0", icon: Clock },
-    { label: "Quota Used", value: "87/100", icon: PieChart },
+const STAT_CARDS = (dashboardInfo: any) => {
+  return [
+    { label: "Products", value: dashboardInfo?.totalProducts ?? "0", icon: Package },
+    { label: "Optimized Items", value: dashboardInfo?.optimizedItemsCount ?? "0", icon: Sparkles },
+    { label: "Queue", value: dashboardInfo?.queue ?? "0", icon: Clock },
+    { label: "Quota Used", value: (dashboardInfo?.quotaUsed?.usage ?? "0") + "/" + (dashboardInfo?.quotaUsed?.planLimit ?? "0"), icon: PieChart,
+      condition: Number(dashboardInfo?.quotaUsed?.usage) >= Number(dashboardInfo?.quotaUsed?.planLimit) ,
+     },
   ];
+}
 
 function StatCard({
   label,
   value,
   icon: Icon,
+  condition = false,
 }: {
   label: string;
   value: string;
   icon: LucideIcon;
+  condition?: boolean;
 }) {
+  console.log("condition:::::::::::::::::::::::::::::::::::::", condition);
   return (
     <div className="card flex items-center gap-4">
       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#f1f1f1]">
@@ -134,7 +136,7 @@ function StatCard({
       </div>
       <div className="flex flex-col gap-1">
         <p className="text-[13px] text-[#616161]">{label}</p>
-        <p className="text-[22px] font-bold leading-tight text-[#303030]">{value}</p>
+        <p className={`text-[22px] font-bold leading-tight text-[#303030] ${condition ? "animate-bounce duration-500 text-red-500" : ""}`}>{value}</p>
       </div>
     </div>
   );
@@ -143,6 +145,7 @@ function StatCard({
 export default function BulkOptimizerClient({
   initialStoreInfo,
   allInitialTemplates,
+  dashboardInfo,
 }: BulkOptimizerClientProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [template, setTemplate] = useState("");
@@ -159,45 +162,52 @@ export default function BulkOptimizerClient({
   );
   const [cruiseLoading, setCruiseLoading] = useState(false);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
-  const [blanksOnly, setBlanksOnly] = useState(false);
+  const [dashboard, setDashboard] = useState(dashboardInfo);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const refetchDashboard = useCallback(async () => {
+    try {
+      const res = await getDashboardInfoApi();
+      if (res?.data) {
+        setDashboard(res.data);
+        return res.data;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return null;
+  }, []);
+
+  const pollDashboard = useCallback(async () => {
+    const data = await refetchDashboard();
+    if (Number(data?.queue) > 0) {
+      setTimeout(pollDashboard, 5000);
+    } else {
+      setRefreshKey((k) => k + 1);
+    }
+  }, [refetchDashboard]);
 
   const handleUpdate = useCallback(
     async (onlyBlanks?: boolean) => {
       if (isUpdating) return;
-      const updateBlanksOnly = onlyBlanks ?? blanksOnly;
+      const updateBlanksOnly = onlyBlanks;
       setIsUpdating(true);
       try {
-        const token =
-          typeof window !== "undefined"
-            ? localStorage.getItem("sessionToken")
-            : null;
-
-        const apiBase = process.env.NEXT_PUBLIC_API_URL;
-        if (!apiBase) {
-          throw new Error("NEXT_PUBLIC_API_URL is not set");
-        }
-
-        const res = await fetch(`${apiBase}/bulk/update`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            applyTo,
-            target: tab,
-            template,
-            cruiseControl: cruiseOn,
-            bcChannelId: selectedChannel?.id,
-            blanksOnly: updateBlanksOnly,
-          }),
+        const response = await updateBulkApi({
+          applyTo,
+          target: tab,
+          template,
+          cruiseControl: cruiseOn,
+          bcChannelId: selectedChannel?.id,
+          blanksOnly: updateBlanksOnly,
         });
 
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          toast.error(err?.message || err?.error || "Update failed");
+        if (response.status) {
+          toast.success("Added bulk update job to queue. Your template is saved and will be applied to new items.");
+          setRefreshKey((k) => k + 1);
+          pollDashboard();
         } else {
-          toast.success("Bulk update is in progress");
+          toast.error(response.message || "Update failed");
         }
       } catch (e: unknown) {
         console.error(e);
@@ -213,7 +223,7 @@ export default function BulkOptimizerClient({
       tab,
       template,
       selectedChannel?.id,
-      blanksOnly,
+      pollDashboard,
     ],
   );
 
@@ -248,9 +258,9 @@ export default function BulkOptimizerClient({
     }
   }
 
-  const handleSaveTemplate = async (onlyBlanks?: boolean) => {
+  const handleSaveTemplate = async (onlyBlanks?: boolean, showToast: boolean = true) => {
     if (isSavingTemplate) return;
-    const saveBlanksOnly = onlyBlanks ?? blanksOnly;
+    const saveBlanksOnly = onlyBlanks;
     setIsSavingTemplate(true);
     try {
       const response = await saveTemplate({
@@ -262,7 +272,9 @@ export default function BulkOptimizerClient({
       });
 
       if (response.status) {
-        toast.success(response.message || "Template has been saved");
+        if (showToast) {
+          toast.success(response.message || "Template has been saved");
+        }
         if (applyTo === "products") {
           setProductTemplateCache(
             tab,
@@ -281,7 +293,9 @@ export default function BulkOptimizerClient({
           setBrandTemplateCache(tab, template);
         }
       } else {
-        toast.error(response.message || "Failed to save template");
+        if (showToast) {
+          toast.error(response.message || "Failed to save template");
+        }
       }
     } catch (e: unknown) {
       console.error(e);
@@ -293,9 +307,10 @@ export default function BulkOptimizerClient({
 
   const handleSaveAndUpdate = async (onlyBlanks: boolean) => {
     if (isSavingTemplate || isUpdating) return;
-    setBlanksOnly(onlyBlanks);
-    await handleSaveTemplate(onlyBlanks);
+    setIsUpdating(true);
+    await handleSaveTemplate(onlyBlanks,false);
     await handleUpdate(onlyBlanks);
+    setIsUpdating(false);
   };
 
   const insertVariable = useCallback((token: string) => {
@@ -390,12 +405,13 @@ export default function BulkOptimizerClient({
       <main className="">
         {/* Impact Overview */}
         <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {STAT_CARDS.map((stat) => (
+          {STAT_CARDS(dashboard).map((stat) => (
             <StatCard
               key={stat.label}
               label={stat.label}
               value={stat.value}
               icon={stat.icon}
+              condition={stat.condition}
             />
           ))}
         </section>
@@ -565,46 +581,7 @@ export default function BulkOptimizerClient({
             brandSample={brandSample}
           />
         </div>
-
-        <div className="card p-0! mt-4">
-          <div className="flex justify-start lg:justify-between items-start md:items-center gap-3 flex-col md:flex-row border-b border-[#DDDDDD] p-4">
-            <div className="flex gap-2 flex-col xl:flex-row">
-              <h2 className="text-base font-bold text-[#303030]">
-                Optimizer History
-              </h2>
-              <span className="badge badge-success whitespace-normal">No pending queue</span>
-            </div>
-            <div className="flex gap-2 flex-col xl:flex-row xl:items-center">
-              <Tooltip delay={0}>
-                <Tooltip.Trigger
-                  aria-label="Refresh history"
-                  className="custom-btn flex h-[28px] w-[28px] shrink-0 items-center justify-center p-0! border-0"
-                >
-                  <Image src="/images/refresh-icon.svg" alt="" width={20} height={20} />
-                </Tooltip.Trigger>
-                <Tooltip.Content placement="top" showArrow>
-                  <Tooltip.Arrow />
-                  <p>Refresh history</p>
-                </Tooltip.Content>
-              </Tooltip>
-
-              <div className="custom-input">
-                <input
-                  type="text"
-                  placeholder="Item Type / Update Type"
-                  className="form-control"
-                />
-              </div>
-
-              <Link href="/optimizerHistory" className="btn-outline shrink-0">
-                View All History
-              </Link>
-            </div>
-          </div>
-          <div className="p-4">
-            <OptimizerHistoryTable maxRows={5} />
-          </div>
-        </div>
+        <OptimizerHistoryTable maxRows={5} onHistoryPage={false} refreshKey={refreshKey} />
       </main>
     </div>
   );

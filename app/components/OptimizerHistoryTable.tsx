@@ -1,14 +1,20 @@
 "use client";
 
 import { getOptimizerHistory } from "@/utils/apis/globalApi";
+import { useDebounce } from "@/utils/customHooks";
+import { Tooltip } from "@heroui/react";
+import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import DataTable, { type TableColumn } from "react-data-table-component";
 
 type OptimizerHistoryTableProps = {
   maxRows?: number;
+  onHistoryPage? : boolean;
+  refreshKey?: number;
 };
 
-type HistoryRow = Record<string, unknown> & {
+type HistoryRow = Record<string, unknown> & {  
   startedAt?: string;
   createdAt?: string;
   completedAt?: string | null;
@@ -20,6 +26,8 @@ type HistoryRow = Record<string, unknown> & {
   resource?: string;
   target?: string | null;
   status?: string;
+  restoreStatus?: string | null;
+  updateType?: string;
 };
 
 const tableCustomStyles = {
@@ -99,10 +107,6 @@ function formatResource(resource?: string) {
   return map[resource] ?? resource.charAt(0).toUpperCase() + resource.slice(1);
 }
 
-function formatUpdateType(blanksOnly?: boolean) {
-  return blanksOnly ? "Update Blank" : "Update All";
-}
-
 function formatTarget(target?: string | null) {
   if (!target) return "—";
   const map: Record<string, string> = {
@@ -173,8 +177,8 @@ const columns: TableColumn<HistoryRow>[] = [
   },
   {
     name: "Update Type",
-    selector: (row) => formatUpdateType(row.blanksOnly),
-    cell: (row) => <span>{formatUpdateType(row.blanksOnly)}</span>,
+    selector: (row) => row.updateType ?? "",
+    cell: (row) => <span>{row.updateType ?? "—"}</span>,
     minWidth: "120px",
   },
   {
@@ -198,7 +202,7 @@ const columns: TableColumn<HistoryRow>[] = [
   {
     name: "Status",
     selector: (row) => row.status ?? "",
-    cell: (row) => <StatusBadge status={row.status ?? ""} />,
+    cell: (row) => <StatusBadge status={row.status ?? "pending"} />,
     width: "120px",
   },
   {
@@ -219,51 +223,129 @@ const columns: TableColumn<HistoryRow>[] = [
 
 export default function OptimizerHistoryTable({
   maxRows,
+  onHistoryPage=false,
+  refreshKey,
 }: OptimizerHistoryTableProps) {
   const [data, setData] = useState<HistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pendingQueque, setPendingQueque] = useState<any[]>([])
+  const [search, setSearch] = useState<string>("")
+  const searchText = useDebounce(search)
 
   const isPreview = maxRows != null && maxRows > 0;
 
-  const sortedData = useMemo(() => sortByLatest(data), [data]);
-  const tableData = isPreview ? sortedData.slice(0, maxRows) : sortedData;
-
-  useEffect(() => {
-    const fetchOptimizerHistory = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await getOptimizerHistory();
-        setData(
-          Array.isArray(response.data) ? (response.data as HistoryRow[]) : [],
-        );
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load history");
-        setData([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchOptimizerHistory = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getOptimizerHistory();
+      setData(
+        Array.isArray(response.data) ? (response.data as HistoryRow[]) : [],
+      );
+      
+      const pendingQueue = response.data.find((item: HistoryRow) => item.status !== "completed" && item.status !== "failed")
+      if(pendingQueue) setPendingQueque([pendingQueue])
+      else setPendingQueque([])
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load history");
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  useEffect(() => { 
     fetchOptimizerHistory();
-  }, []);
+  }, [refreshKey]);
+
+  const handleRefresh = () => {
+    fetchOptimizerHistory()
+  }
+
+ // Derive everything in one chain
+ const tableData = useMemo(() => {
+  const sorted = sortByLatest(data);
+
+  // filter first on all data
+  const filtered = searchText.trim()
+    ? sorted.filter((item) => {
+        const resource = formatResource(item.resource).toLowerCase();
+        const updateType = String(item.updateType ?? "").toLowerCase();
+        return resource.includes(searchText.toLowerCase()) || updateType.includes(searchText.toLowerCase());
+      })
+    : sorted;
+
+  // then slice
+  return isPreview ? filtered.slice(0, maxRows) : filtered;
+}, [data, searchText, isPreview, maxRows]);
+
+  useEffect(() => console.log(search),[search])
 
   return (
-    <div className="overflow-hidden rounded-lg border border-[#e3e3e3] bg-white">
-      {error && <p className="p-4 text-sm text-red-600">{error}</p>}
-      <DataTable
-        columns={columns}
-        data={tableData}
-        pagination={!isPreview}
-        paginationPerPage={10}
-        paginationRowsPerPageOptions={[10, 25, 50]}
-        progressPending={loading}
-        customStyles={tableCustomStyles}
-        theme="material"
-        noDataComponent={
-          <p className="py-10 text-sm text-[#616161]">No optimizer history yet.</p>
-        }
-      />
-    </div>
+
+    <div className="card p-0! mt-4">
+          <div className="flex justify-start lg:justify-between items-start md:items-center gap-3 flex-col md:flex-row border-b border-[#DDDDDD] p-4">
+            <div className="flex gap-2 flex-col xl:flex-row">
+              <h2 className="text-base font-bold text-[#303030]">
+                Bulk Optimizer History
+              </h2>
+              {
+                pendingQueque && pendingQueque.length > 0 ? 
+                <span className="badge badge-warning whitespace-normal">{pendingQueque.length} pending queue</span> 
+                : <span className="badge badge-success whitespace-normal">No pending queue</span>
+              }
+            </div>
+            <div className="flex gap-2 flex-col xl:flex-row xl:items-center">
+              <Tooltip delay={0}>
+                <Tooltip.Trigger
+                  onClick={handleRefresh}
+                  aria-label="Refresh history"
+                  className="custom-btn flex h-[28px] w-[28px] shrink-0 items-center justify-center p-0! border-0"
+                >
+                  <Image src="/images/refresh-icon.svg" alt="" width={20} height={20} />
+                </Tooltip.Trigger>
+                <Tooltip.Content placement="top" showArrow>
+                  <Tooltip.Arrow />
+                  <p>Refresh history</p>
+                </Tooltip.Content>
+              </Tooltip>
+
+              <div className="custom-input">
+                <input
+                  type="text"
+                  onChange={(e) => setSearch(e.target.value)}
+                  value={search}
+                  placeholder="Item Type / Update Type"
+                  className="form-control"
+                />
+              </div>
+
+              {!onHistoryPage && <Link href="/optimizerHistory" className="btn-outline shrink-0">
+                View All History
+              </Link>}
+            </div>
+          </div>
+          <div className="p-4">
+              <div className="overflow-hidden rounded-lg border border-[#e3e3e3] bg-white">
+          {error && <p className="p-4 text-sm text-red-600">{error}</p>}
+          <DataTable
+            columns={columns}
+            data={tableData}
+            pagination={!isPreview}
+            paginationPerPage={10}
+            paginationRowsPerPageOptions={[10, 25, 50]}
+            progressPending={loading}
+            customStyles={tableCustomStyles}
+            theme="material"
+            noDataComponent={
+              <p className="py-10 text-sm text-[#616161]">No optimizer history yet.</p>
+            }
+          />
+        </div>
+          </div>
+        </div>
+
+    
   );
 }

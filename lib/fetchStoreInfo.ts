@@ -41,3 +41,7 @@ export async function fetchStoreInfoServer(): Promise<StoreInfo | null> {
 export async function getAllTemplates(): Promise<any | null> {
   return fetchFromServer("/bulk/get-all-templates");
 }
+
+export async function getDashboardInfo(): Promise<any | null> {
+  return fetchFromServer("/bulk/get-dashboard-info");
+}

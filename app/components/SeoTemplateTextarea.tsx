@@ -45,9 +45,9 @@ function snapPosition(text: string, index: number): number {
 }
 
 function snapSelection(el: HTMLTextAreaElement, text: string) {
-  const start = snapPosition(text, el.selectionStart ?? 0);
-  const end = snapPosition(text, el.selectionEnd ?? 0);
-  if (start !== el.selectionStart || end !== el.selectionEnd) {
+  const start = snapPosition(text, el?.selectionStart ?? 0);
+  const end = snapPosition(text, el?.selectionEnd ?? 0);
+  if (start !== el?.selectionStart || end !== el?.selectionEnd) {
     el.setSelectionRange(start, end);
   }
 }

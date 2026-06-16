@@ -1,6 +1,6 @@
 "use client";
 
-import { DollarSign, History, LayoutGrid } from "lucide-react";
+import { DollarSign, History, LayoutGrid, RotateCcw } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -21,10 +21,18 @@ const NAV_ITEMS = [
       path === "/optimizerHistory" || path.startsWith("/optimizerHistory/"),
   },
   {
-    href: "#upgrade",
+    href: "/upgrade",
     label: ["Upgrade"],
     Icon: DollarSign,
-    match: () => false,
+    match: (path: string) =>
+      path === "/upgrade" || path.startsWith("/upgrade/"),
+  },
+  {
+    href: "/restore",
+    label: ["Restore"],
+    Icon: RotateCcw,
+    match: (path: string) =>
+      path === "/restore" || path.startsWith("/restore/"),
   },
 ] as const;
 

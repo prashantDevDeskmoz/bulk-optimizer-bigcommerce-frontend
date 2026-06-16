@@ -39,6 +39,7 @@ export function ChannelProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       setError(null);
       const fetched = await fetchChannelsFromApi();
+      console.log("fetched:::::::::::::::::::::::::::::::::::::", fetched);
       setChannels(fetched);
       if (fetched.length > 0) {
         setSelectedChannel((prev) => prev ?? fetched[0]);

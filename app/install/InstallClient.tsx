@@ -32,7 +32,7 @@ export default function InstallClient() {
         dispatchSessionReady();
       }
 
-      router.replace("/bulkOptimizer");
+      router.push("/bulkOptimizer");
     }
 
     handleInstall();

@@ -9,8 +9,8 @@ const loginWithPayloadJWT = async (signed_payload_jwt: string) => {
     });
     if (!response.ok) {
         const errorBody = await response.json().catch(() => ({}));
-        console.log("errorBody333333333333333333333", errorBody);
-        throw new Error(errorBody.error || "JWT verification failed");
+        console.log("errorBody", errorBody);
+        throw new Error(errorBody.message || "JWT verification failed");
     }
     const data = await response.json();
     return data;

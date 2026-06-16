@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google"
-import "./globals.css";
-import AppShell from "./components/AppShell";
-import { Providers } from "./providers";
+import { Inter } from "next/font/google";
 import { ToastContainer } from "react-toastify";
+import AppShell from "./components/AppShell";
+import "./globals.css";
+import { PayPalProviders } from "./paypalProviders";
+import { Providers } from "./providers";
 
 const inter = Inter({
   subsets: [],
@@ -26,9 +27,12 @@ export default function RootLayout({
       <body
         className={`min-h-full flex flex-col font-sans ${inter.className}`}
       >
-        <Providers>
-          <AppShell>{children}</AppShell>
-        </Providers>
+        <PayPalProviders>
+
+          <Providers>
+            <AppShell>{children}</AppShell>
+          </Providers>
+        </PayPalProviders>
         <ToastContainer position="top-right" autoClose={3000} />
       </body>
     </html>

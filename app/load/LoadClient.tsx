@@ -3,11 +3,12 @@
 import { loginWithPayloadJWT } from "@/utils/apis/authApi";
 import { dispatchSessionReady } from "@/utils/sessionEvents";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function LoadClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
 
   // BigCommerce sends `signed_payload_jwt` on the load callback
   const signed_payload_jwt =
@@ -20,7 +21,8 @@ export default function LoadClient() {
         localStorage.setItem("sessionToken", response.sessionToken);
         dispatchSessionReady();
         router.push("/bulkOptimizer");
-      } catch (error) {
+      } catch (error : any) {
+        setError(error.message);
         console.error(error);
       }
     };
@@ -28,9 +30,16 @@ export default function LoadClient() {
     verifyAndRedirect();
   }, [router, signed_payload_jwt]);
 
-  useEffect(() => {
-    router.push("/bulkOptimizer");
-  }, [router]);
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center">
