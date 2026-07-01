@@ -1,8 +1,9 @@
-const CACHE_TTL_MS = 60_000;
+const CACHE_TTL_MS = 120_000; // 2 minutes
 
 export type ChannelPreviewSamples = {
   product: Record<string, unknown> | null;
   category: Record<string, unknown> | null;
+  productImage: Record<string, unknown> | null;
 };
 
 type CacheEntry = {
@@ -10,11 +11,7 @@ type CacheEntry = {
   data: ChannelPreviewSamples;
 };
 
-const cache = new Map<string, CacheEntry>();
-
-function cacheKey(storeHash: string, bcChannelId: string): string {
-  return `${storeHash}:${bcChannelId}`;
-}
+const cache = new Map<number, CacheEntry>();
 
 function getSessionToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -22,7 +19,7 @@ function getSessionToken(): string | null {
 }
 
 async function fetchChannelPreviewSamplesFromApi(
-  bcChannelId: string,
+  bcChannelId: number,
 ): Promise<ChannelPreviewSamples> {
   const token = getSessionToken();
   if (!token) throw new Error("Not authenticated");
@@ -31,7 +28,7 @@ async function fetchChannelPreviewSamplesFromApi(
   if (!base) throw new Error("NEXT_PUBLIC_API_URL is not set");
 
   const url = new URL(`${base.replace(/\/$/, "")}/preview/channel-samples`);
-  url.searchParams.set("bcChannelId", bcChannelId);
+  url.searchParams.set("bcChannelId", String(bcChannelId));
 
   const res = await fetch(url.toString(), {
     headers: {
@@ -49,20 +46,22 @@ async function fetchChannelPreviewSamplesFromApi(
     status?: boolean;
     data?: ChannelPreviewSamples;
   };
-  return json.data ?? { product: null, category: null };
+  return json.data ?? { product: null, category: null, productImage: null };
 }
 
 /**
- * Returns cached preview samples for (storeHash, bcChannelId) when fresh (< 1 min),
+ * Returns cached preview samples for (storeHash, bcChannelId) when fresh (< 2 minutes),
  * otherwise fetches and updates the cache.
  */
 export async function getCachedChannelPreviewSamples(
-  storeHash: string,
-  bcChannelId: string,
+  bcChannelId: number,
 ): Promise<{ data: ChannelPreviewSamples; fromCache: boolean }> {
-  const key = cacheKey(storeHash, bcChannelId);
+  const key = bcChannelId;
   const now = Date.now();
   const hit = cache.get(key);
+
+  console.log("hit", cache);
+
   if (hit && now - hit.fetchedAt < CACHE_TTL_MS) {
     return { data: hit.data, fromCache: true };
   }
@@ -74,8 +73,9 @@ export async function getCachedChannelPreviewSamples(
 
 export function mapProductToSampleTokens(
   product: Record<string, unknown> & { images: { description: string }[] } | null,
-): Partial<Record<string, string>> {
+) {
   if (!product) return {};
+
   const price =
     product.price != null
       ? String(product.price as string | number)
@@ -97,13 +97,13 @@ export function mapProductToSampleTokens(
     "[[condition]]": String(product.condition ?? ""),
     "[[page title]]": String(product.page_title ?? ""),
     "[[meta description]]": String(product.meta_description ?? ""),
-    "[[alt text]]": String(product.images?.[0]?.description ?? ""),
+    "[[alt text]]": product.images?.find(image => image.description && image.description != "")?.description ?? "",
   };
 }
 
 export function mapCategoryToSampleTokens(
   category: Record<string, unknown> | null,
-): Partial<Record<string, string>> {
+) {
   if (!category) return {};
   return {
     "[[category name]]": String(category.name ?? ""),
@@ -114,7 +114,7 @@ export function mapCategoryToSampleTokens(
 
 export function mapBrandToSampleTokens(
   brand: Record<string, unknown> | null,
-): Partial<Record<string, string>> {
+) {
   if (!brand) return {};
   return {
     "[[name]]": String(brand.name ?? ""),

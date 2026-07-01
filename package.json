@@ -13,6 +13,7 @@
     "@heroui/select": "^2.4.28",
     "@heroui/system": "^2.4.28",
     "@heroui/theme": "^2.4.26",
+    "@paypal/react-paypal-js": "^10.1.1",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.7.0",
     "next": "16.2.2",

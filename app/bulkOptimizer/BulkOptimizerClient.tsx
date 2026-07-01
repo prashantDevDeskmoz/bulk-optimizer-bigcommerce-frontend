@@ -1,28 +1,19 @@
 "use client";
 
 import { useChannelContext } from "@/context/ChannelContext";
-import { getDashboardInfoApi, saveTemplate, updateBulkApi, updateCruiseControl } from "@/utils/apis/globalApi";
-import type { StoreInfo } from "@/utils/apis/storeApi";
+import { getDashboardInfoApi, saveTemplate, updateBulkApi, updateCruiseControl } from "@/utils/apis/globalClientApi";
+import type { StoreInfo } from "@/utils/apis/globalServerApi";
 import { getAllProductAndSaveTemplate, getBrandTemplateCache, getCategoryTemplateCache, getProductTemplateCache, setBrandTemplateCache, setCategoryTemplateCache, setProductTemplateCache } from "@/utils/cacheTemplate";
-
-import {
-  Clock,
-  Package,
-  PieChart,
-  Sparkles,
-  type LucideIcon
-} from "lucide-react";
-
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Clock, Package, PieChart, Sparkles, type LucideIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
-import BulkOptimizerPreview, {
-  type SeoTab,
-} from "../components/BulkOptimizerPreview";
-import ChannelSelector from "../components/globalSelector";
+import BulkOptimizerPreview, { type SeoTab } from "../components/BulkOptimizerPreview";
+import ChannelSelector from "../components/ChannelSelector";
 import OptimizerHistoryTable from "../components/OptimizerHistoryTable";
 import SeoTemplateTextarea from "../components/SeoTemplateTextarea";
 
-let PRODUCT_VARIABLES: { label: string; token: string }[] = [
+const PRODUCT_VARIABLES: { label: string; token: string }[] = [
   { label: "Product Name", token: "[[product name]]" },
   { label: "SKU", token: "[[sku]]" },
   { label: "Price", token: "[[price]]" },
@@ -35,70 +26,15 @@ let PRODUCT_VARIABLES: { label: string; token: string }[] = [
   { label: "Store Name", token: "[[store name]]" },
 ];
 
-let CATEGORY_VARIABLES: { label: string; token: string }[] = [
+const CATEGORY_VARIABLES: { label: string; token: string }[] = [
   { label: "Category Name", token: "[[category name]]" },
   { label: "Store Name", token: "[[store name]]" },
 ];
 
-let BRAND_VARIABLES: { label: string; token: string }[] = [
+const BRAND_VARIABLES: { label: string; token: string }[] = [
   { label: "Name", token: "[[name]]" },
   { label: "Store Name", token: "[[store name]]" },
 ];
-
-function IconMenu({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden
-    >
-      <line x1="4" y1="6" x2="20" y2="6" />
-      <line x1="4" y1="12" x2="20" y2="12" />
-      <line x1="4" y1="18" x2="20" y2="18" />
-    </svg>
-  );
-}
-
-function IconInfo({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden
-    >
-      <circle cx="12" cy="12" r="10" />
-      <line x1="12" y1="16" x2="12" y2="12" />
-      <line x1="12" y1="8" x2="12.01" y2="8" />
-    </svg>
-  );
-}
-
-function IconChevronDown({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden
-    >
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  );
-}
 
 type BulkOptimizerClientProps = {
   initialStoreInfo: StoreInfo | null;
@@ -128,7 +64,6 @@ function StatCard({
   icon: LucideIcon;
   condition?: boolean;
 }) {
-  console.log("condition:::::::::::::::::::::::::::::::::::::", condition);
   return (
     <div className="card flex items-center gap-4">
       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#f1f1f1]">
@@ -153,17 +88,21 @@ export default function BulkOptimizerClient({
   const [applyTo, setApplyTo] = useState("products");
   const [cruiseOn, setCruiseOn] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [storeName, setStoreName] = useState<string | null>(
-    initialStoreInfo?.store_name ?? null,
-  );
   const { selectedChannel } = useChannelContext();
-  const [brandSample, setBrandSample]: any = useState(
-    initialStoreInfo?.brand ?? null,
-  );
+  
   const [cruiseLoading, setCruiseLoading] = useState(false);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
   const [dashboard, setDashboard] = useState(dashboardInfo);
   const [refreshKey, setRefreshKey] = useState(0);
+  const router = useRouter();
+
+  const brandSample = useMemo(() => {
+    return initialStoreInfo?.brand ?? null;
+  }, [initialStoreInfo?.brand]);
+
+  const storeName = useMemo(() => {
+    return initialStoreInfo?.store_name ?? null;
+  }, [initialStoreInfo?.store_name]);
 
   const refetchDashboard = useCallback(async () => {
     try {
@@ -182,13 +121,10 @@ export default function BulkOptimizerClient({
     const data = await refetchDashboard();
     if (Number(data?.queue) > 0) {
       setTimeout(pollDashboard, 5000);
-    } else {
-      setRefreshKey((k) => k + 1);
     }
   }, [refetchDashboard]);
 
-  const handleUpdate = useCallback(
-    async (onlyBlanks?: boolean) => {
+  const handleUpdate = useCallback(async (onlyBlanks?: boolean) => {
       if (isUpdating) return;
       const updateBlanksOnly = onlyBlanks;
       setIsUpdating(true);
@@ -198,7 +134,7 @@ export default function BulkOptimizerClient({
           target: tab,
           template,
           cruiseControl: cruiseOn,
-          bcChannelId: selectedChannel?.id,
+          bcChannelId: selectedChannel?.channel_id,
           blanksOnly: updateBlanksOnly,
         });
 
@@ -222,7 +158,7 @@ export default function BulkOptimizerClient({
       isUpdating,
       tab,
       template,
-      selectedChannel?.id,
+      selectedChannel?.channel_id,
       pollDashboard,
     ],
   );
@@ -241,13 +177,13 @@ export default function BulkOptimizerClient({
         cruiseControl: !cruiseOn,
         applyTo,
         target: tab,
-        bcChannelId: selectedChannel?.id ?? "",
+        bcChannelId: selectedChannel?.channel_id ?? 0,
       });
       if (response.status) {
         if (applyTo === "products") {
-          setProductTemplateCache(tab, selectedChannel?.id ?? "", !cruiseOn ? "true" : "false", "cruiseControl");
+          setProductTemplateCache(tab, selectedChannel?.channel_id ?? 0, !cruiseOn ? "true" : "false", "cruiseControl");
         } else if (applyTo === "categories") {
-          setCategoryTemplateCache(tab, selectedChannel?.id ?? "", !cruiseOn ? "true" : "false", "cruiseControl");
+          setCategoryTemplateCache(tab, selectedChannel?.channel_id ?? 0, !cruiseOn ? "true" : "false", "cruiseControl");
         }
         setCruiseLoading(false);
         toast.success(response.message);
@@ -265,7 +201,7 @@ export default function BulkOptimizerClient({
     try {
       const response = await saveTemplate({
         template,
-        bcChannelId: selectedChannel?.id,
+        bcChannelId: selectedChannel?.channel_id ?? 0,
         applyTo,
         target: tab,
         blanksOnly: saveBlanksOnly,
@@ -276,19 +212,9 @@ export default function BulkOptimizerClient({
           toast.success(response.message || "Template has been saved");
         }
         if (applyTo === "products") {
-          setProductTemplateCache(
-            tab,
-            selectedChannel?.id ?? "",
-            template,
-            "template",
-          );
+          setProductTemplateCache(tab, selectedChannel?.channel_id ?? 0, template, "template");
         } else if (applyTo === "categories") {
-          setCategoryTemplateCache(
-            tab,
-            selectedChannel?.id ?? "",
-            template,
-            "template",
-          );
+          setCategoryTemplateCache(tab, selectedChannel?.channel_id ?? 0, template, "template");
         } else if (applyTo === "brands") {
           setBrandTemplateCache(tab, template);
         }
@@ -315,27 +241,36 @@ export default function BulkOptimizerClient({
 
   const insertVariable = useCallback((token: string) => {
     const el = textareaRef.current;
+    let resolvedToken = token;
+  
     if (token === "[[store name]]" && storeName) {
-      token = storeName;
+      resolvedToken = storeName;
     }
-    const insertText = `${token} `;
-
+  
+    const buildInsertText = (before: string) => {
+      const needsLeadingSpace = before.length > 0 && !/\s$/.test(before);
+      return `${needsLeadingSpace ? " " : ""}${resolvedToken} `;
+    };
+  
     if (!el) {
-      setTemplate((current) => current + insertText);
+      setTemplate((current) => current + buildInsertText(current));
       return;
     }
-
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
-    setTemplate(
-      (current) => current.slice(0, start) + insertText + current.slice(end),
-    );
+  
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    const before = template.slice(0, start);
+    const after = template.slice(end);
+    const insertText = buildInsertText(before);
+  
+    setTemplate(before + insertText + after);
+  
     requestAnimationFrame(() => {
       el.focus();
       const pos = start + insertText.length;
       el.setSelectionRange(pos, pos);
     });
-  }, [storeName]);
+  }, [storeName, template]);
 
   const tabLabels: { id: SeoTab; label: string }[] = [
     { id: "title", label: "Title Tag" },
@@ -359,25 +294,27 @@ export default function BulkOptimizerClient({
 
   useEffect(() => {
     if (applyTo === "products") {
-      setTemplate(getProductTemplateCache(tab, selectedChannel?.id ?? "", "template") ?? storeName ?? "");
+      setTemplate(getProductTemplateCache(tab, selectedChannel?.channel_id ?? 0, "template") ?? storeName ?? "");
     } else if (applyTo === "categories") {
-      setTemplate(getCategoryTemplateCache(tab, selectedChannel?.id ?? "", "template") ?? storeName ?? "");
+      setTemplate(getCategoryTemplateCache(tab, selectedChannel?.channel_id ?? 0, "template") ?? storeName ?? "");
     } else if (applyTo === "brands") {
       setTemplate(getBrandTemplateCache(tab) ?? storeName ?? "");
     }
-  }, [storeName, applyTo, tab, selectedChannel?.id]);
+  }, [storeName, applyTo, tab, selectedChannel?.channel_id]);
 
   useEffect(() => {
+    // no alt option for brands and categories
     if ((applyTo === "brands" || applyTo === "categories") && tab === "alt") {
       setTab("title");
     }
 
+    // setCuise on for products, categories and brands
     if (applyTo === "products") {
-      setCruiseOn(getProductTemplateCache(tab, selectedChannel?.id ?? "", "cruiseControl") as unknown as boolean | false);
+      setCruiseOn(getProductTemplateCache(tab, selectedChannel?.channel_id ?? 0, "cruiseControl") as unknown as boolean | false);
     } else if (applyTo === "categories") {
-      setCruiseOn(getCategoryTemplateCache(tab, selectedChannel?.id ?? "", "cruiseControl") as unknown as boolean | false);
+      setCruiseOn(getCategoryTemplateCache(tab, selectedChannel?.channel_id ?? 0, "cruiseControl") as unknown as boolean | false);
     }
-  }, [applyTo, tab, selectedChannel?.id]);
+  }, [applyTo, tab, selectedChannel?.channel_id]);
 
   return (
     <div className="min-h-screen bg-[#F1F1F1] p-5 pt-0">
@@ -396,7 +333,7 @@ export default function BulkOptimizerClient({
         <div className="flex items-center gap-3">
           <ChannelSelector />
 
-          <button className="custom-btn">
+          <button onClick={() => router.push("/upgrade")} className="custom-btn">
             Upgrade
           </button>
         </div>
@@ -541,7 +478,7 @@ export default function BulkOptimizerClient({
                     aria-label={`Cruise Control ${cruiseOn ? "on" : "off"}`}
                     onClick={handleCruiseControl}
                     disabled={cruiseLoading}
-                    className={`flex h-6 w-13 shrink-0 items-center justify-between rounded-md p-0.5 transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${cruiseOn ? "bg-[#303030]" : "bg-[#c9c9c9]"
+                    className={`flex h-6 w-13 shrink-0 items-center justify-between rounded-md p-0.5 transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${cruiseOn ? "bg-[#5d5fef]" : "bg-[#c9c9c9]"
                       }`}
                   >
                     {cruiseOn ? (

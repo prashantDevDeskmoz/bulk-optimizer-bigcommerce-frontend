@@ -1,6 +1,6 @@
 "use client";
 
-import { getCruiseControlHistory } from "@/utils/apis/globalApi";
+import { getCruiseControlHistory } from "@/utils/apis/globalClientApi";
 import { useDebounce } from "@/utils/customHooks";
 import { Tooltip } from "@heroui/react";
 import Image from "next/image";
@@ -72,6 +72,49 @@ const tableCustomStyles = {
     },
   },
 };
+
+const cruiseHistoryGridCols =
+  "grid-cols-[170px_120px_140px_130px_minmax(0,2fr)_minmax(140px,1fr)]";
+
+function CruiseControlHistoryTableSkeleton({
+  rows = 10,
+  showPagination = true,
+}: {
+  rows?: number;
+  showPagination?: boolean;
+}) {
+  const rowGridClass = `grid min-h-[48px] w-full ${cruiseHistoryGridCols} items-center gap-4 border-b border-[#eeeeee] px-4`;
+
+  return (
+    <div className="w-full animate-pulse bg-white">
+      <div
+        className={`grid min-h-[40px] w-full ${cruiseHistoryGridCols} items-center gap-4 border-b border-[#e3e3e3] bg-[#f6f6f7] px-4 text-xs font-semibold text-[#616161]`}
+      >
+        <span>Date</span>
+        <span>Item Type</span>
+        <span>Template Type</span>
+        <span>Updated Items</span>
+        <span>Template Value</span>
+        <span>Item Name</span>
+      </div>
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className={rowGridClass}>
+          <div className="h-4 w-full rounded bg-[#ececec]" />
+          <div className="h-4 w-full rounded bg-[#ececec]" />
+          <div className="h-4 w-full rounded bg-[#ececec]" />
+          <div className="h-4 w-full rounded bg-[#ececec]" />
+          <div className="h-4 w-full rounded bg-[#ececec]" />
+          <div className="h-4 w-full rounded bg-[#ececec]" />
+        </div>
+      ))}
+      {showPagination ? (
+        <div className="border-t border-[#eeeeee] px-4 py-3">
+          <div className="h-4 w-40 rounded bg-[#ececec]" />
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function pad2(n: number) {
   return String(n).padStart(2, "0");
@@ -261,21 +304,27 @@ export default function CruiseControlHistoryTable({
       <div className="p-4">
         <div className="overflow-hidden rounded-lg border border-[#e3e3e3] bg-white">
           {error && <p className="p-4 text-sm text-red-600">{error}</p>}
-          <DataTable
-            columns={columns}
-            data={tableData}
-            pagination={!isPreview}
-            paginationPerPage={10}
-            paginationRowsPerPageOptions={[10, 25, 50]}
-            progressPending={loading}
-            customStyles={tableCustomStyles}
-            theme="material"
-            noDataComponent={
-              <p className="py-10 text-sm text-[#616161]">
-                No cruise control history yet.
-              </p>
-            }
-          />
+          {loading ? (
+            <CruiseControlHistoryTableSkeleton
+              rows={isPreview ? (maxRows ?? 5) : 10}
+              showPagination={!isPreview}
+            />
+          ) : (
+            <DataTable
+              columns={columns}
+              data={tableData}
+              pagination={!isPreview}
+              paginationPerPage={10}
+              paginationRowsPerPageOptions={[10, 25, 50]}
+              customStyles={tableCustomStyles}
+              theme="material"
+              noDataComponent={
+                <p className="py-10 text-sm text-[#616161]">
+                  No cruise control history yet.
+                </p>
+              }
+            />
+          )}
         </div>
       </div>
     </div>

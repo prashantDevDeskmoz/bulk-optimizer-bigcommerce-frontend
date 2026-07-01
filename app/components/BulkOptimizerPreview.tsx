@@ -28,10 +28,7 @@ const BASE_SAMPLE_VALUES: Record<string, string> = {
 const CURRENT_PAGE_TITLE = (tab: string) =>
   `This is a very long existing ${tab} that demonstrates how the current product, category or brand ${tab} might look in the store before optimization — including extra marketing copy and keywords that push the length higher.`;
 
-function applyTemplate(
-  template: string,
-  values: Record<string, string>,
-): string {
+function applyTemplate(template: string, values: Record<string, string | undefined>): string {
   let out = template;
   for (const [key, val] of Object.entries(values)) {
     out = out.split(key).join(val);
@@ -51,7 +48,7 @@ function previewSubtitle(tab: SeoTab): string {
   return "Preview optimized alt text appearance.";
 }
 
-function currentValueForTab(tab: SeoTab, sampleValues: Record<string, string>) {
+function currentValueForTab(tab: SeoTab, sampleValues: Record<string, string | undefined>) {
   const defaultDisplay = CURRENT_PAGE_TITLE(tabFieldLabel(tab));
   switch (tab) {
     case "title":
@@ -89,55 +86,38 @@ type BulkOptimizerPreviewProps = {
   tab: SeoTab;
   applyTo: string;
   storeName: string | null;
-  brandSample: Record<string, unknown> | null;
+  brandSample: Record<string, any> | null;
 };
 
-export default function BulkOptimizerPreview({
-  template,
-  tab,
-  applyTo,
-  storeName,
-  brandSample,
-}: BulkOptimizerPreviewProps) {
+export default function BulkOptimizerPreview({ template, tab, applyTo, storeName, brandSample }: BulkOptimizerPreviewProps) {
   const { selectedChannel } = useChannelContext();
-  const channelPreview = useChannelPreviewSamples(selectedChannel?.id);
+  const channelPreview = useChannelPreviewSamples(selectedChannel?.channel_id || 0);
 
   const sampleUrl = useMemo(() => {
     const base = selectedChannel?.site_url ?? "";
     const path =
       applyTo === "products"
-        ? channelPreview.product?.custom_url?.url
+        ? (tab === "alt" ? channelPreview.productImage : channelPreview.product)?.custom_url?.url
         : applyTo === "categories"
           ? channelPreview.category?.url?.path
           : applyTo === "brands"
-            ? (brandSample as { custom_url?: { url?: string } })?.custom_url
-              ?.url
+            ? (brandSample)?.custom_url?.url
             : null;
-    if (!base) return null;
-    if (!path) return null;
+    if (!base || !path) return null;
     if (path.startsWith("http")) return path;
     return path.startsWith("/") ? `${base}${path}` : `${base}/${path}`;
-  }, [
-    selectedChannel?.site_url,
-    channelPreview.product,
-    channelPreview.category,
-    applyTo,
-    brandSample,
-  ]);
+  }, 
+   [ selectedChannel?.site_url, channelPreview.product, channelPreview.category, applyTo, brandSample]
+  );
 
   const sampleValues = useMemo(() => {
-    const brandName =
-      brandSample && typeof brandSample.name === "string"
-        ? brandSample.name
-        : BASE_SAMPLE_VALUES["[[name]]"];
+    const brandName = brandSample && brandSample?.name ? brandSample.name : BASE_SAMPLE_VALUES["[[name]]"];
     return {
       ...BASE_SAMPLE_VALUES,
       "[[store name]]": storeName ?? BASE_SAMPLE_VALUES["[[store name]]"],
       ...(applyTo === "products"
         ? mapProductToSampleTokens(
-          channelPreview.product as Parameters<
-            typeof mapProductToSampleTokens
-          >[0],
+          (tab === "alt" ? channelPreview.productImage : channelPreview.product) as Record<string, unknown> & { images: { description: string }[] } | null,
         )
         : applyTo === "categories"
           ? mapCategoryToSampleTokens(channelPreview.category)
@@ -146,13 +126,7 @@ export default function BulkOptimizerPreview({
             : {}),
       "[[name]]": brandName,
     };
-  }, [
-    storeName,
-    channelPreview.product,
-    channelPreview.category,
-    applyTo,
-    brandSample,
-  ]);
+  }, [ storeName, channelPreview.product, channelPreview.productImage, channelPreview.category, applyTo, brandSample, tab]);
 
   const newPreview = useMemo(
     () => applyTemplate(template, sampleValues),

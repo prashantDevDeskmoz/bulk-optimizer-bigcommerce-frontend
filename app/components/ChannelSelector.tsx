@@ -3,10 +3,9 @@
 import { useChannelContext } from "@/context/ChannelContext";
 import type { Channel } from "@/types/channel";
 import Image from "next/image";
-import { useEffect, useState } from "react";
 
 function getChannelKey(channel: Channel, index: number) {
-  return String(channel.id ?? channel.channel_id ?? `ch-${index}`);
+  return String(channel.channel_id ?? `ch-${index}`);
 }
 
 function getChannelDisplayText(channel: Channel) {
@@ -20,14 +19,9 @@ function getChannelDisplayText(channel: Channel) {
 }
 
 export default function ChannelSelector() {
-  const { channels, loading, selectedChannel, setSelectedChannel } =
-    useChannelContext();
-  const [mounted, setMounted] = useState(false);
+  const { channels, loading, selectedChannel, setSelectedChannel } = useChannelContext();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
+  
   const handleChannelChange = (value: string) => {
     const channel = channels.find(
       (ch, index) => getChannelKey(ch, index) === value,
@@ -35,7 +29,8 @@ export default function ChannelSelector() {
     if (channel) setSelectedChannel(channel);
   };
 
-  if (!mounted) {
+
+  if (loading && channels.length === 0) {
     return (
       <div className="custom-dropi link-iconDropi flex-1 lg:flex-none lg:w-[240px]">
         <span className="dropiLabel">Channel</span>
@@ -63,12 +58,7 @@ export default function ChannelSelector() {
       <span className="dropiLabel">
         Channel
         <a href={linkHref} target="_blank" rel="noopener noreferrer">
-          <Image
-            src="/images/link-icon.svg"
-            alt=""
-            width={20}
-            height={20}
-          />
+          <Image src="/images/link-icon.svg" alt="" width={20} height={20}/>
         </a>
       </span>
       <div className="relative w-full overflow-hidden">

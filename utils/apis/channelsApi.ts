@@ -1,20 +1,18 @@
 import type { Channel } from "@/types/channel";
 
 type DbChannelRow = {
-  bcChannelId?: number;
-  name?: string;
-  site_url?: string | null;
-  status?: string;
-  platform?: string;
+  bcChannelId: number;
+  name: string;
+  site_url: string | null;
+  status: string;
+  platform: string;
 };
 
 export function mapDbChannelToChannel(row: DbChannelRow): Channel {
-  const bcId = row.bcChannelId ?? 0;
   return {
-    id: String(bcId),
-    channel_id: bcId,
+    channel_id: row.bcChannelId,
     channel_name: row.name ?? "",
-    site_url: row.site_url ?? undefined,
+    site_url: row.site_url ?? "",
     status: row.status ?? "",
     platform: row.platform ?? "",
   };

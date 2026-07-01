@@ -5,10 +5,17 @@ import { dispatchSessionReady } from "@/utils/sessionEvents";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+const LoadStates: Record<number, string> = {
+  1 : "Loading your app...",
+  2 : "Verifying your identity...",
+  3 : "Almost there...",
+}
+
 export default function LoadClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [loading,setLoading] = useState<number>(1);
 
   // BigCommerce sends `signed_payload_jwt` on the load callback
   const signed_payload_jwt =
@@ -28,6 +35,13 @@ export default function LoadClient() {
     };
 
     verifyAndRedirect();
+    const interval = setInterval(() => {
+      setLoading(prev => prev + 1 < 3 ? prev + 1 : 3);
+      if(loading >= 3) clearInterval(interval);
+    }, 2000);
+
+    return () => clearInterval(interval);
+
   }, [router, signed_payload_jwt]);
 
   if (error) {
@@ -45,7 +59,7 @@ export default function LoadClient() {
     <div className="flex min-h-screen items-center justify-center">
       <div className="text-center">
         <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-gray-900" />
-        <p>Loading your app , verifying your identity...</p>
+        <p>{LoadStates[loading]}</p>
       </div>
     </div>
   );

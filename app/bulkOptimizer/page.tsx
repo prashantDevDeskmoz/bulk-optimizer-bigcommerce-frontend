@@ -1,4 +1,4 @@
-import { fetchStoreInfoServer, getAllTemplates, getDashboardInfo } from "@/lib/fetchStoreInfo";
+import { fetchStoreInfoServer, getAllTemplates, getDashboardInfo } from "@/utils/apis/globalServerApi";
 import BulkOptimizerClient from "./BulkOptimizerClient";
 
 export default async function BulkOptimizerPage() {
@@ -9,7 +9,7 @@ export default async function BulkOptimizerPage() {
     getDashboardInfo(),
   ]);
 
-  console.log("dashboardInfo:::::::::::::::::::::::::::::::::::::", dashboardInfo);
+  console.log("dashboardInfo", dashboardInfo);
 
   return (
   <>

@@ -1,93 +1,86 @@
-"use client";
-
-import { captureOrderApi, createOrderApi } from "@/utils/apis/globalApi";
-import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
-import { useMemo, useState } from "react";
+import { getPlanApi } from "@/utils/apis/globalServerApi";
+import { Suspense } from "react";
+import UpgradeClient from "./UpgradeClient";
 
 const UPGRADE_AMOUNT = "9.99";
 
-export default function UpgradePage() {
-  const [showPayPal, setShowPayPal] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+export default async function UpgradePage() {
+  
+  const getPlan = async () => {
+    const response = await getPlanApi();
+    return response;
+  };
 
-  const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
-  const providerOptions = useMemo(
-    () => ({
-      clientId: paypalClientId ?? "",
-      currency: "USD",
-      intent: "capture",
-    }),
-    [paypalClientId],
-  );
-
-  async function createOrder() {
-    setErrorMessage(null);
-    const reponse = await createOrderApi(UPGRADE_AMOUNT);
-    return reponse.id;
-  }
-
-  async function onApprove(data: { orderID: string }) {
-    setErrorMessage(null);
-    const res = await captureOrderApi(data.orderID);
-    if (res.success) {
-      setIsSuccess(true);
-    } else {
-      throw new Error(res.message || "Payment capture failed");
-    }
-  }
+  const { plan, totalOptimizations } = await getPlan();
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center p-6">
-      <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-bold text-zinc-900">Upgrade to Premium</h1>
-        <p className="mt-2 text-sm text-zinc-500">
-          Unlock all features with a one-click upgrade.
-        </p>
+    <Suspense fallback={<UpgradePageSkeleton />}>
+      <UpgradeClient plan={plan} totalOptimizations={totalOptimizations} />
+    </Suspense>
+  )
+  
+}
 
-        {isSuccess ? (
-          <p className="mt-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-            Payment successful. Your upgrade is being activated.
-          </p>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={() => setShowPayPal((prev) => !prev)}
-              className="mt-4 rounded-md bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
-            >
-              {showPayPal ? "Hide PayPal" : `Upgrade - $${UPGRADE_AMOUNT}`}
-            </button>
+ function UpgradePageSkeleton() {
+  return (
+    <div className="min-h-screen bg-[#F1F1F1] p-5 pt-0 animate-pulse">
+      <div className="w-full lg:w-[950px] mx-auto">
+        <header className="py-3 lg:py-6 flex justify-between items-start lg:items-center gap-3 flex-col lg:flex-row">
+          <div className="flex flex-col gap-2">
+            <div className="h-6 w-24 rounded bg-[#e5e5e5]" />
+            <div className="h-3 w-72 max-w-full rounded bg-[#ececec]" />
+          </div>
+          <div className="h-9 w-24 rounded-md bg-[#e5e5e5]" />
+        </header>
 
-            {errorMessage ? (
-              <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-                {errorMessage}
-              </p>
-            ) : null}
-
-            {showPayPal ? (
-              paypalClientId || true ? (
-                <div className="mt-4">
-                  <PayPalScriptProvider options={providerOptions}>
-                    <PayPalButtons
-                      style={{ layout: "vertical", color: "blue" }}
-                      createOrder={createOrder}
-                      onApprove={onApprove}
-                      onError={(err) => {
-                        console.error("PayPal error", err);
-                        setErrorMessage("PayPal checkout failed. Please try again.");
-                      }}
-                    />
-                  </PayPalScriptProvider>
+        <div className="flex flex-col gap-4">
+          <div className="card p-4">
+            <div className="flex flex-col lg:flex-row gap-8">
+              <div className="flex-1 space-y-4">
+                <div className="h-6 w-28 rounded-full bg-[#e5e5e5]" />
+                <div className="flex gap-3">
+                  <div className="h-10 w-10 rounded-full bg-[#ececec]" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 w-32 rounded bg-[#e5e5e5]" />
+                    <div className="h-3 w-full max-w-sm rounded bg-[#ececec]" />
+                  </div>
                 </div>
-              ) : (
-                <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700">
-                  Missing NEXT_PUBLIC_PAYPAL_CLIENT_ID in frontend environment.
-                </p>
-              )
-            ) : null}
-          </>
-        )}
+                <div className="h-2 w-full rounded-full bg-[#ececec]" />
+                <div className="space-y-3">
+                  <div className="h-3 w-full rounded bg-[#ececec]" />
+                  <div className="h-3 w-full rounded bg-[#ececec]" />
+                  <div className="h-3 w-2/3 rounded bg-[#ececec]" />
+                </div>
+              </div>
+
+              <div className="hidden lg:block w-px bg-[#e5e5e5]" />
+              <div className="lg:hidden h-px bg-[#e5e5e5]" />
+
+              <div className="flex-1 space-y-4">
+                <div className="flex gap-3">
+                  <div className="h-10 w-10 rounded-full bg-[#ececec]" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 w-44 rounded bg-[#e5e5e5]" />
+                    <div className="h-3 w-full max-w-xs rounded bg-[#ececec]" />
+                  </div>
+                </div>
+                <div className="h-7 w-28 rounded bg-[#e5e5e5]" />
+                <div className="space-y-2">
+                  <div className="h-3 w-full rounded bg-[#ececec]" />
+                  <div className="h-3 w-full rounded bg-[#ececec]" />
+                  <div className="h-3 w-4/5 rounded bg-[#ececec]" />
+                  <div className="h-3 w-3/4 rounded bg-[#ececec]" />
+                </div>
+                <div className="h-9 w-full rounded-md bg-[#e5e5e5]" />
+              </div>
+            </div>
+          </div>
+
+          <div className="card p-4 space-y-4">
+            <div className="h-5 w-36 rounded bg-[#e5e5e5]" />
+            <div className="h-48 w-full rounded-xl bg-[#ececec]" />
+          </div>
+        </div>
       </div>
     </div>
   );

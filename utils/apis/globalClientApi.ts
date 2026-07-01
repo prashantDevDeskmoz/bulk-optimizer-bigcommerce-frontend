@@ -30,7 +30,8 @@ const fetchWithAuth = async (url: string, options: any) => {
     return response.json();
 }
 
-export const getOptimizerHistory = async () => await fetchWithAuth("/job-histories", { method: "GET" });
+export const getOptimizerHistory = async () => 
+    await fetchWithAuth("/job-histories", { method: "GET" });
 export const getDashboardInfoApi = async () =>
     await fetchWithAuth("/bulk/get-dashboard-info", { method: "GET" });
 export const getCruiseControlHistory = async () =>

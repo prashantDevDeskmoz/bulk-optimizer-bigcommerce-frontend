@@ -1,6 +1,5 @@
 "use client";
 
-import { getStoreId } from "@/utils/api";
 import {
   getCachedChannelPreviewSamples,
   type ChannelPreviewSamples,
@@ -10,19 +9,20 @@ import { useEffect, useState } from "react";
 export type UseChannelPreviewSamplesResult = {
   product: Record<string, any> | null;
   category: Record<string, any> | null;
+  productImage: Record<string, any> | null;
   loading: boolean;
   error: string | null;
   fromCache: boolean | null;
 };
 
-const empty: ChannelPreviewSamples = { product: null, category: null };
+const empty: ChannelPreviewSamples = { product: null, category: null, productImage: null };
 
 /**
  * Loads one product + one category for the BigCommerce channel (tree-scoped category),
- * with a 1-minute in-memory cache per (storeHash, bcChannelId).
+ * with a 2-minute in-memory cache per bcChannelId.
  */
 export function useChannelPreviewSamples(
-  bcChannelId: string | undefined,
+  bcChannelId: number,
 ): UseChannelPreviewSamplesResult {
   const [state, setState] = useState<UseChannelPreviewSamplesResult>({
     ...empty,
@@ -32,8 +32,7 @@ export function useChannelPreviewSamples(
   });
 
   useEffect(() => {
-    const storeHash = getStoreId();
-    if (!storeHash || !bcChannelId) {
+    if (!bcChannelId) {
       setState({
         ...empty,
         loading: false,
@@ -51,12 +50,13 @@ export function useChannelPreviewSamples(
       fromCache: null,
     }));
 
-    getCachedChannelPreviewSamples(storeHash, bcChannelId)
+    getCachedChannelPreviewSamples(bcChannelId)
       .then(({ data, fromCache }) => {
         if (cancelled) return;
         setState({
           product: data.product,
           category: data.category,
+          productImage: data.productImage,
           loading: false,
           error: null,
           fromCache,
@@ -69,6 +69,7 @@ export function useChannelPreviewSamples(
           loading: false,
           error: e instanceof Error ? e.message : "Preview load failed",
           fromCache: false,
+          productImage: null,
         });
       });
 

@@ -28,7 +28,6 @@ export default function RootLayout({
         className={`min-h-full flex flex-col font-sans ${inter.className}`}
       >
         <PayPalProviders>
-
           <Providers>
             <AppShell>{children}</AppShell>
           </Providers>
