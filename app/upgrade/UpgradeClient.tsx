@@ -306,11 +306,11 @@ export default function UpgradeClient({ plan , totalOptimizations }: { plan: any
                           </td>
                         </tr>
     
-                        {/* CTA row */}
+                        {/* CTA row
                         <tr>
                           <td className="px-4 py-4 bg-white border-r border-[#e5e5e5]" />
     
-                          {/* Free — current plan, disabled */}
+                          //Free — current plan, disabled //
                           <td className="px-4 py-4 text-center bg-white border-r border-[#e5e5e5]">
                             <button
                               disabled
@@ -320,13 +320,13 @@ export default function UpgradeClient({ plan , totalOptimizations }: { plan: any
                             </button>
                           </td>
     
-                          {/* Pro — upgrade CTA */}
+                          // Pro — upgrade CTA //
                           <td className="px-4 py-4 text-center bg-[#EFF7F1]">
                             <button type="button" className="custom-btn w-full max-w-[180px] h-9">
                               Choose Pro
                             </button>
                           </td>
-                        </tr>
+                        </tr> */}
                       </tbody>
                     </table>
                   </div>

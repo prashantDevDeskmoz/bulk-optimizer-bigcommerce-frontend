@@ -20,10 +20,9 @@ export type StoreInfo = {
 
 
 // make a common function to fetch from the server
-export async function fetchFromServer(url: string): Promise<any | null> {
+export async function fetchFromServer(url: string, cache: string = "no-store"): Promise<any | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_TOKEN_COOKIE)?.value;
-  console.log("token:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::", token);
   if (!token) return null;
 
   const base = process.env.NEXT_PUBLIC_API_URL;
@@ -34,10 +33,9 @@ export async function fetchFromServer(url: string): Promise<any | null> {
       Authorization: `Bearer ${token}`,
       Accept: "application/json",
     },
-    cache: "no-store",
+    cache: cache as RequestCache,
   });
 
-  console.log("resddddddddddddddddddddddddddddddddd", res);
   if (!res.ok) return null;
 
   const json = await res.json();
@@ -54,7 +52,7 @@ export async function fetchFromServer(url: string): Promise<any | null> {
 }
 
 export async function fetchStoreInfoServer(): Promise<StoreInfo | null> {
-  return fetchFromServer("/store");
+  return fetchFromServer("/store/store");
 }
 
 export async function getAllTemplates(): Promise<any | null> {

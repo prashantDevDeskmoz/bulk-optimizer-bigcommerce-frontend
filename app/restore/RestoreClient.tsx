@@ -320,6 +320,7 @@ export default function RestoreClient() {
     .then((res) => {
       setItems(Array.isArray(res.data) ? res.data : []);
       setTotalItems(res.total ?? 0);
+      setProductsError(null);
     })
     .catch((e) => {
       setProductsError(

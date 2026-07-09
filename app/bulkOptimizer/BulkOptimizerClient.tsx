@@ -119,9 +119,11 @@ export default function BulkOptimizerClient({
 
   const pollDashboard = useCallback(async () => {
     const data = await refetchDashboard();
+    let int = null;
     if (Number(data?.queue) > 0) {
-      setTimeout(pollDashboard, 5000);
+      int = setTimeout(pollDashboard, 5000);
     }
+    return int;
   }, [refetchDashboard]);
 
   const handleUpdate = useCallback(async (onlyBlanks?: boolean) => {
@@ -167,7 +169,13 @@ export default function BulkOptimizerClient({
     if (allInitialTemplates && allInitialTemplates.length > 0) {
       getAllProductAndSaveTemplate(allInitialTemplates);
     }
-  }, [allInitialTemplates])
+    return () => {
+      const int = pollDashboard();
+      if (int) {
+        clearTimeout(int as unknown as number);
+      }
+    }
+  }, [allInitialTemplates, pollDashboard])
 
   const handleCruiseControl = async () => {
     try {
@@ -326,7 +334,7 @@ export default function BulkOptimizerClient({
           </h1>
 
           <p className="text-xs text-[#616161] mt-0.5">
-            Optimiz hundreds of products safely with resuable SEO templates.
+            Optimize hundreds of products safely with resuable SEO templates.
           </p>
         </div>
 
