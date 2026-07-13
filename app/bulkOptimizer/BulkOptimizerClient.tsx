@@ -44,12 +44,12 @@ type BulkOptimizerClientProps = {
 
 const STAT_CARDS = (dashboardInfo: any) => {
   return [
-    { label: "Producddddddddddts", value: dashboardInfo?.totalProducts ?? "0", icon: Package },
+    { label: "Products", value: dashboardInfo?.totalProducts ?? "0", icon: Package },
     { label: "Optimized Items", value: dashboardInfo?.optimizedItemsCount ?? "0", icon: Sparkles },
     { label: "Queue", value: dashboardInfo?.queue ?? "0", icon: Clock },
-    { label: "Quota Used", value: (dashboardInfo?.quotaUsed?.usage ?? "0") + "/" + (dashboardInfo?.quotaUsed?.planLimit ?? "0"), icon: PieChart,
-      condition: Number(dashboardInfo?.quotaUsed?.usage) >= Number(dashboardInfo?.quotaUsed?.planLimit) ,
-     },
+    { label: "Quota Used", value: (dashboardInfo?.quotaUsed?.usage ?? "0") + "/" + (dashboardInfo?.quotaUsed?.planLimit ?? "∞"), icon: PieChart,
+      condition: dashboardInfo?.quotaUsed?.planLimitReached ?? false ,
+    },
   ];
 }
 
