@@ -93,13 +93,11 @@ function CruiseControlHistoryTableSkeleton({
         <span>Date</span>
         <span>Item Type</span>
         <span>Template Type</span>
-        <span>Updated Items</span>
         <span>Template Value</span>
         <span>Item Name</span>
       </div>
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className={rowGridClass}>
-          <div className="h-4 w-full rounded bg-[#ececec]" />
           <div className="h-4 w-full rounded bg-[#ececec]" />
           <div className="h-4 w-full rounded bg-[#ececec]" />
           <div className="h-4 w-full rounded bg-[#ececec]" />
@@ -186,12 +184,6 @@ const columns: TableColumn<HistoryRow>[] = [
     selector: (row) => formatTarget(row.target),
     cell: (row) => <span>{formatTarget(row.target)}</span>,
     minWidth: "140px",
-  },
-  {
-    name: "Updated Items",
-    selector: (row) => String(getUpdatedItems(row)),
-    cell: (row) => <span>{getUpdatedItems(row)}</span>,
-    width: "130px",
   },
   {
     name: "Template Value",

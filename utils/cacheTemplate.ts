@@ -1,12 +1,11 @@
-
-const templateCache = new Map<string, string>();
+const templateCache = new Map<string, string | boolean>();
 
 export const getProductTemplateCache = (tab: string, channelId: number, type: "template" | "cruiseControl") => {
     const key = `product:${tab}:${channelId}:${type}`;
     return templateCache.get(key); 
 }
 
-export const setProductTemplateCache = (tab: string, channelId: number, value: string, type: "template" | "cruiseControl") => {
+export const setProductTemplateCache = (tab: string, channelId: number, value: string | boolean, type: "template" | "cruiseControl") => {
     const key = `product:${tab}:${channelId}:${type}`;
     templateCache.set(key, value);
 };
@@ -16,7 +15,7 @@ export const getCategoryTemplateCache = (tab: string, channelId: number, type: "
     return templateCache.get(key);
 };
 
-export const setCategoryTemplateCache = (tab: string, channelId: number, value: string, type: "template" | "cruiseControl") => {
+export const setCategoryTemplateCache = (tab: string, channelId: number, value: string | boolean, type: "template" | "cruiseControl") => {
     const key = `category:${tab}:${channelId}:${type}`;
     templateCache.set(key, value);
 };

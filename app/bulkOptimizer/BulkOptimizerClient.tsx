@@ -83,7 +83,7 @@ export default function BulkOptimizerClient({
   dashboardInfo,
 }: BulkOptimizerClientProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [template, setTemplate] = useState("");
+  const [template, setTemplate] = useState<any>("");
   const [tab, setTab] = useState<SeoTab>("title");
   const [applyTo, setApplyTo] = useState("products");
   const [cruiseOn, setCruiseOn] = useState(false);
@@ -189,9 +189,9 @@ export default function BulkOptimizerClient({
       });
       if (response.status) {
         if (applyTo === "products") {
-          setProductTemplateCache(tab, selectedChannel?.channel_id ?? 0, !cruiseOn ? "true" : "false", "cruiseControl");
+          setProductTemplateCache(tab, selectedChannel?.channel_id ?? 0, !cruiseOn ? true : false, "cruiseControl");
         } else if (applyTo === "categories") {
-          setCategoryTemplateCache(tab, selectedChannel?.channel_id ?? 0, !cruiseOn ? "true" : "false", "cruiseControl");
+          setCategoryTemplateCache(tab, selectedChannel?.channel_id ?? 0, !cruiseOn ? true : false, "cruiseControl");
         }
         setCruiseLoading(false);
         toast.success(response.message);
@@ -261,7 +261,7 @@ export default function BulkOptimizerClient({
     };
   
     if (!el) {
-      setTemplate((current) => current + buildInsertText(current));
+      setTemplate((current: any) => current + buildInsertText(current));
       return;
     }
   
@@ -303,8 +303,10 @@ export default function BulkOptimizerClient({
   useEffect(() => {
     if (applyTo === "products") {
       setTemplate(getProductTemplateCache(tab, selectedChannel?.channel_id ?? 0, "template") ?? storeName ?? "");
+      console.log("product template:", getProductTemplateCache(tab, selectedChannel?.channel_id ?? 0, "template"));
     } else if (applyTo === "categories") {
       setTemplate(getCategoryTemplateCache(tab, selectedChannel?.channel_id ?? 0, "template") ?? storeName ?? "");
+      console.log("category template:", getCategoryTemplateCache(tab, selectedChannel?.channel_id ?? 0, "template"));
     } else if (applyTo === "brands") {
       setTemplate(getBrandTemplateCache(tab) ?? storeName ?? "");
     }
@@ -319,8 +321,10 @@ export default function BulkOptimizerClient({
     // setCuise on for products, categories and brands
     if (applyTo === "products") {
       setCruiseOn(getProductTemplateCache(tab, selectedChannel?.channel_id ?? 0, "cruiseControl") as unknown as boolean | false);
+      console.log("product cruise control:", getProductTemplateCache(tab, selectedChannel?.channel_id ?? 0, "cruiseControl"));
     } else if (applyTo === "categories") {
       setCruiseOn(getCategoryTemplateCache(tab, selectedChannel?.channel_id ?? 0, "cruiseControl") as unknown as boolean | false);
+      console.log("category cruise control:", getCategoryTemplateCache(tab, selectedChannel?.channel_id ?? 0, "cruiseControl"));
     }
   }, [applyTo, tab, selectedChannel?.channel_id]);
 
