@@ -1,56 +1,80 @@
 "use client";
 
-import { captureOrderApi, createOrderApi } from "@/utils/apis/globalClientApi";
+import { createSubscriptionApi, getSubscriptionStatusApi } from "@/utils/apis/globalClientApi";
 import { PayPalButtons, usePayPalScriptReducer } from "@paypal/react-paypal-js";
 import { Crown, Gift, Lock, Settings, TrendingUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, useTransition } from "react";
 
-const UPGRADE_AMOUNT = 20;
+async function pollSubscriptionStatus(
+  subscriptionID: string,
+  attempts = 10,
+  delayMs = 1500,
+): Promise<boolean> {
+  for (let i = 0; i < attempts; i++) {
+    const res = await getSubscriptionStatusApi(subscriptionID);
+    if (res.status === "active") return true;
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  return false;
+}
 
 export default function UpgradeClient({ plan , totalOptimizations }: { plan: any, totalOptimizations: number }) {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [isSuccess, setIsSuccess] = useState(false);
-    const [isCreatingOrder, setIsCreatingOrder] = useState(false);
-    const [isCapturingOrder, setIsCapturingOrder] = useState(false);
+    const [isCreatingSubscription, setIsCreatingSubscription] = useState(false);
+    const [isConfirmingSubscription, setIsConfirmingSubscription] = useState(false);
     const [isRefreshingPlan, startRefreshTransition] = useTransition();
     const router = useRouter();
 
     const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
-    const createOrder = useCallback(async () => {
-        setErrorMessage(null);
-        setIsCreatingOrder(true);
-        try {
-          const reponse = await createOrderApi(UPGRADE_AMOUNT.toString());
-          return reponse.id;
-        } finally {
-          setIsCreatingOrder(false);
+    const createSubscription = useCallback(async () => {
+      setErrorMessage(null);
+      setIsCreatingSubscription(true);
+      try {
+        const response = await createSubscriptionApi();
+        if (!response?.id) {
+          throw new Error(response?.message || response?.error || "Failed to create subscription");
         }
-      }, []);
-    
-      const onApprove = useCallback(async (data: { orderID: string }) => {
-        setErrorMessage(null);
-        setIsCapturingOrder(true);
-        try {
-          const res = await captureOrderApi(data.orderID);
-          if (res.success) {
-            setIsSuccess(true);
-            startRefreshTransition(() => {
-              router.refresh();
-            });
-          } else {
-            throw new Error(res.message || "Payment capture failed");
-          }
-        } finally {
-          setIsCapturingOrder(false);
-        }
-      }, [router]);
+        return response.id;
+      } catch (err) {
+        setErrorMessage(err instanceof Error ? err.message : "Failed to create subscription");
+        throw err;
+      } finally {
+        setIsCreatingSubscription(false);
+      }
+    }, []);
 
-      const onPayPalError = useCallback((err: unknown) => {
-        console.error("PayPal error", err);
-        setErrorMessage("PayPal checkout failed. Please try again.");
-      }, []);
+    const onApprove = useCallback(async (data: { subscriptionID?: string }) => {
+      setErrorMessage(null);
+      setIsConfirmingSubscription(true);
+      try {
+        if (!data.subscriptionID) {
+          throw new Error("Missing subscription ID");
+        }
+        const confirmed = await pollSubscriptionStatus(data.subscriptionID);
+        if (confirmed) {
+          setIsSuccess(true);
+          startRefreshTransition(() => {
+            router.refresh();
+          });
+        } else {
+          // Payment went through; only the webhook is still catching up. Don't
+          // throw — that would surface as a scary "checkout failed" error.
+          setErrorMessage("Payment is processing. Please refresh in a moment.");
+        }
+      } catch (err) {
+        setErrorMessage(err instanceof Error ? err.message : "Subscription confirmation failed");
+      } finally {
+        setIsConfirmingSubscription(false);
+      }
+    }, [router]);
+
+    const onPayPalError = useCallback((err: unknown) => {
+      console.error("PayPal error", err);
+      setErrorMessage("PayPal checkout failed. Please try again.");
+    }, []);
     
       return (
         <div className="min-h-screen bg-[#F1F1F1] p-5 pt-0">
@@ -72,11 +96,11 @@ export default function UpgradeClient({ plan , totalOptimizations }: { plan: any
                       totalOptimizations={totalOptimizations}
                       limit={plan.plan.itemLimit ?? 100}
                       paypalClientId={paypalClientId}
-                      createOrder={createOrder}
+                      createSubscription={createSubscription}
                       onApprove={onApprove}
                       isSuccess={isSuccess}
-                      isCreatingOrder={isCreatingOrder}
-                      isCapturingOrder={isCapturingOrder}
+                      isCreatingSubscription={isCreatingSubscription}
+                      isConfirmingSubscription={isConfirmingSubscription}
                       isRefreshingPlan={isRefreshingPlan}
                       errorMessage={errorMessage}
                       onPayPalError={onPayPalError}
@@ -474,22 +498,22 @@ const ProPlan = () => {
 }
 
 type PayPalCheckoutProps = {
-  createOrder: () => Promise<string>;
-  onApprove: (data: { orderID: string }) => Promise<void>;
+  createSubscription: () => Promise<string>;
+  onApprove: (data: { subscriptionID?: string }) => Promise<void>;
   onPayPalError: (err: unknown) => void;
   onLoadFailed: () => void;
-  isCreatingOrder: boolean;
-  isCapturingOrder: boolean;
+  isCreatingSubscription: boolean;
+  isConfirmingSubscription: boolean;
   isRefreshingPlan: boolean;
 };
 
 const PayPalCheckout = ({
-  createOrder,
+  createSubscription,
   onApprove,
   onPayPalError,
   onLoadFailed,
-  isCreatingOrder,
-  isCapturingOrder,
+  isCreatingSubscription,
+  isConfirmingSubscription,
   isRefreshingPlan,
 }: PayPalCheckoutProps) => {
   const [{ isResolved, isRejected }] = usePayPalScriptReducer();
@@ -512,35 +536,37 @@ const PayPalCheckout = ({
 
   return (
     <div className="w-full min-h-[45px] space-y-2">
-      {isCreatingOrder && (
+      {isCreatingSubscription && (
         <div className="flex items-center justify-center gap-2 rounded-md bg-[#f5f5f5] px-3 py-2">
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#5d5fef] border-t-transparent" />
-          <p className="text-sm text-[#616161]">Creating order...</p>
+          <p className="text-sm text-[#616161]">Creating subscription...</p>
         </div>
       )}
-      {isCapturingOrder && (
-        <div className="flex items-center justify-center gap-2 rounded-md bg-[#f5f5f5] px-3 py-2">
-          <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#5d5fef] border-t-transparent" />
-          <p className="text-sm text-[#616161]">Capturing payment...</p>
+      {isConfirmingSubscription || isRefreshingPlan ? (
+        <div className="flex flex-col items-center justify-center gap-2 rounded-md bg-[#f5f5f5] px-3 py-6">
+          <span className="h-8 w-8 animate-spin rounded-full border-4 border-[#5d5fef] border-t-transparent" />
+          <p className="text-sm font-medium text-[#303030]">
+            {isConfirmingSubscription ? "Confirming your subscription..." : "Refreshing your plan..."}
+          </p>
+          <p className="text-xs text-[#616161]">Please don&apos;t close this window.</p>
         </div>
+      ) : (
+        <PayPalButtons
+          style={{ layout: "vertical", color: "blue", shape: "rect" }}
+          disabled={isCreatingSubscription}
+          createSubscription={async () => createSubscription()}
+          onApprove={async (data) => {
+            // Don't await — resolve immediately so the PayPal popup closes
+            // right after approval instead of hanging blank while we poll.
+            void onApprove({ subscriptionID: data.subscriptionID ?? undefined });
+          }}
+          onError={(err) => {
+            onPayPalError(err);
+            onLoadFailed();
+          }}
+          onCancel={() => onLoadFailed()}
+        />
       )}
-      {isRefreshingPlan && (
-        <div className="flex items-center justify-center gap-2 rounded-md bg-[#f5f5f5] px-3 py-2">
-          <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#5d5fef] border-t-transparent" />
-          <p className="text-sm text-[#616161]">Refreshing your plan...</p>
-        </div>
-      )}
-      <PayPalButtons
-        style={{ layout: "vertical", color: "blue", shape: "rect" }}
-        disabled={isCreatingOrder || isCapturingOrder || isRefreshingPlan}
-        createOrder={createOrder}
-        onApprove={onApprove}
-        onError={(err) => {
-          onPayPalError(err);
-          onLoadFailed();
-        }}
-        onCancel={() => onLoadFailed()}
-      />
     </div>
   );
 };
@@ -549,11 +575,11 @@ type FreePlanProps = {
   totalOptimizations: number;
   limit: number;
   paypalClientId?: string;
-  createOrder: () => Promise<string>;
-  onApprove: (data: { orderID: string }) => Promise<void>;
+  createSubscription: () => Promise<string>;
+  onApprove: (data: { subscriptionID?: string }) => Promise<void>;
   isSuccess: boolean;
-  isCreatingOrder: boolean;
-  isCapturingOrder: boolean;
+  isCreatingSubscription: boolean;
+  isConfirmingSubscription: boolean;
   isRefreshingPlan: boolean;
   errorMessage: string | null;
   onPayPalError: (err: unknown) => void;
@@ -563,194 +589,194 @@ const FreePlan = ({
   totalOptimizations,
   limit,
   paypalClientId,
-  createOrder,
+  createSubscription,
   onApprove,
   isSuccess,
-  isCreatingOrder,
-  isCapturingOrder,
+  isCreatingSubscription,
+  isConfirmingSubscription,
   isRefreshingPlan,
   errorMessage,
   onPayPalError,
 }: FreePlanProps) => {
-    const [showPayPal, setShowPayPal] = useState(false);
+  const [showPayPal, setShowPayPal] = useState(false);
 
-    const handleUpgradeToPro = () => {
-        setShowPayPal(true);
-    };
+  const handleUpgradeToPro = () => {
+    setShowPayPal(true);
+  };
 
-    return (
-        <div className="card p-0 overflow-hidden">
-                <div className="flex flex-col lg:flex-row gap-8">
-                  {/* Left: Free Plan (Current) */}
-                  <div className="flex-1">
-                    <div className="badge w-fit bg-[#5d5fef]! text-white!">Current Plan</div>
-    
-                    <div className="mt-3 flex items-start gap-3">
-                      <div className="h-10 w-10 rounded-full bg-[#EEEDFC] flex items-center justify-center text-[#5d5fef] shrink-0">
-                        <Crown className="h-5 w-5 text-[#5d5fef]" strokeWidth={1.75} aria-hidden />
-                      </div>
-                      <div>
-                        <h2 className="text-base font-bold text-[#303030]">Free Plan</h2>
-                        <p className="text-xs text-[#616161]">
-                          Optimize your products in bulk with essential SEO features.
-                        </p>
-                      </div>
-                    </div>
-    
-                    <div className="mt-5">
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-xs font-bold leading-tight text-[#303030]">
-                          {totalOptimizations}
-                        </span>
-                        <span className="text-xs font-medium text-[#616161]">
-                          / {limit} Optimizations Used
-                        </span>
-                      </div>
-    
-                      <div className="mt-2 h-2 w-full rounded-full bg-[#e5e5e5] overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-[#3f3f3f]"
-                          style={{ width: `${(totalOptimizations / limit) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-    
-                    <div className="mt-4 mb-1">
-                      <div className="flex items-center justify-between py-3 border-b border-[#e5e5e5]">
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#e8f5ee] text-[#0f6a3a]">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
-                              <path d="M20 6L9 17l-5-5" />
-                            </svg>
-                          </span>
-                          <span className="text-xs text-[#616161]">Status</span>
-                        </div>
-                        <span className="badge bg-[#5d5fef]! text-white!">Free</span>
-                      </div>
-    
-                      <div className="flex items-center justify-between py-3 border-b border-[#e5e5e5]">
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#e8f5ee] text-[#0f6a3a]">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
-                              <path d="M20 6L9 17l-5-5" />
-                            </svg>
-                          </span>
-                          <span className="text-xs text-[#616161]">Price</span>
-                        </div>
-                        <span className="text-xs font-medium text-[#303030]">US$ 0 / month</span>
-                      </div>
-    
-                      <div className="flex items-center justify-between py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#e8f5ee] text-[#0f6a3a]">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
-                              <path d="M20 6L9 17l-5-5" />
-                            </svg>
-                          </span>
-                          <span className="text-xs text-[#616161]">Monthly Optimizations</span>
-                        </div>
-                        <span className="text-xs font-medium text-[#303030]">{limit}</span>
-                      </div>
-                    </div>
-                  </div>
-    
-                  {/* Divider */}
-                  <div className="hidden lg:block w-px bg-[#e5e5e5]" />
-                  <div className="lg:hidden h-px bg-[#e5e5e5]" />
-    
-                  {/* Right: Pro upgrade */}
-                  <div className="flex-1 flex flex-col">
-                    <div className="flex items-start gap-3">
-                      <div className="h-10 w-10 rounded-full bg-[#5d5fef] flex items-center justify-center text-white shrink-0">
-                        <TrendingUp className="h-5 w-5" strokeWidth={1.75} aria-hidden />
-                      </div>
-                      <div>
-                        <h3 className="text-base font-bold text-[#303030]">
-                          Need more optimizations?
-                        </h3>
-                        <p className="text-xs text-[#616161]">
-                        Upgrade to Pro. Unlock more features.
-                        </p>
-                      </div>
-                    </div>
-    
-                    <div className="mt-5 flex items-baseline gap-1">
-                      <span className="text-[22px] font-bold leading-tight text-[#5d5fef]">
-                        US$ 20
-                      </span>
-                      <span className="text-xs font-medium text-[#616161]">/ month</span>
-                    </div>
-    
-                    <div className="mt-5 space-y-3">
-                      {[
-                        "Unlimited optimizations",
-                        "Advanced automation features",
-                        "Cruise Control",
-                        "Auto optimize new products",
-                      ].map((label) => (
-                        <div key={label} className="flex items-center gap-2">
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#e8f5ee] text-[#0f6a3a] shrink-0">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
-                              <path d="M20 6L9 17l-5-5" />
-                            </svg>
-                          </span>
-                          <span className="text-xs text-[#616161]">{label}</span>
-                        </div>
-                      ))}
-                    </div>
-    
-                    <div className="mt-auto pt-6">
-                      {isSuccess ? (
-                        <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-                          Payment successful. Your upgrade is being activated.
-                        </p>
-                      ) : showPayPal ? (
-                        paypalClientId ? (
-                          <PayPalCheckout
-                            createOrder={createOrder}
-                            onApprove={onApprove}
-                            onPayPalError={onPayPalError}
-                            onLoadFailed={() => setShowPayPal(false)}
-                            isCreatingOrder={isCreatingOrder}
-                            isCapturingOrder={isCapturingOrder}
-                            isRefreshingPlan={isRefreshingPlan}
-                          />
-                        ) : (
-                          <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700">
-                            Missing NEXT_PUBLIC_PAYPAL_CLIENT_ID in frontend environment.
-                          </p>
-                        )
-                      ) : (
-                        <button type="button" onClick={handleUpgradeToPro} className="custom-btn w-full h-9">
-                          Upgrade to Pro
-                        </button>
-                      )}
+  return (
+    <div className="card p-0 overflow-hidden">
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* Left: Free Plan (Current) */}
+        <div className="flex-1">
+          <div className="badge w-fit bg-[#5d5fef]! text-white!">Current Plan</div>
 
-                      {showPayPal && !isSuccess ? (
-                        <button
-                          type="button"
-                          onClick={() => setShowPayPal(false)}
-                          className="btn-outline mt-2 w-full h-9"
-                        >
-                          Cancel upgrade
-                        </button>
-                      ) : null}
+          <div className="mt-3 flex items-start gap-3">
+            <div className="h-10 w-10 rounded-full bg-[#EEEDFC] flex items-center justify-center text-[#5d5fef] shrink-0">
+              <Crown className="h-5 w-5 text-[#5d5fef]" strokeWidth={1.75} aria-hidden />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-[#303030]">Free Plan</h2>
+              <p className="text-xs text-[#616161]">
+                Optimize your products in bulk with essential SEO features.
+              </p>
+            </div>
+          </div>
 
-                      {errorMessage ? (
-                        <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-                          {errorMessage}
-                        </p>
-                      ) : null}
+          <div className="mt-5">
+            <div className="flex items-baseline gap-1">
+              <span className="text-xs font-bold leading-tight text-[#303030]">
+                {totalOptimizations}
+              </span>
+              <span className="text-xs font-medium text-[#616161]">
+                / {limit} Optimizations Used
+              </span>
+            </div>
 
-                      {!isSuccess && (
-                        <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-[#616161]">
-                          <Lock className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-                          <span>Cancel anytime. No hidden fees.</span>
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
+            <div className="mt-2 h-2 w-full rounded-full bg-[#e5e5e5] overflow-hidden">
+              <div
+                className="h-full rounded-full bg-[#3f3f3f]"
+                style={{ width: `${(totalOptimizations / limit) * 100}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="mt-4 mb-1">
+            <div className="flex items-center justify-between py-3 border-b border-[#e5e5e5]">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#e8f5ee] text-[#0f6a3a]">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                </span>
+                <span className="text-xs text-[#616161]">Status</span>
               </div>
-    )
+              <span className="badge bg-[#5d5fef]! text-white!">Free</span>
+            </div>
+
+            <div className="flex items-center justify-between py-3 border-b border-[#e5e5e5]">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#e8f5ee] text-[#0f6a3a]">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                </span>
+                <span className="text-xs text-[#616161]">Price</span>
+              </div>
+              <span className="text-xs font-medium text-[#303030]">US$ 0 / month</span>
+            </div>
+
+            <div className="flex items-center justify-between py-3">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#e8f5ee] text-[#0f6a3a]">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                </span>
+                <span className="text-xs text-[#616161]">Monthly Optimizations</span>
+              </div>
+              <span className="text-xs font-medium text-[#303030]">{limit}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="hidden lg:block w-px bg-[#e5e5e5]" />
+        <div className="lg:hidden h-px bg-[#e5e5e5]" />
+
+        {/* Right: Pro upgrade */}
+        <div className="flex-1 flex flex-col">
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 rounded-full bg-[#5d5fef] flex items-center justify-center text-white shrink-0">
+              <TrendingUp className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-[#303030]">
+                Need more optimizations?
+              </h3>
+              <p className="text-xs text-[#616161]">
+                Upgrade to Pro. Unlock more features.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 flex items-baseline gap-1">
+            <span className="text-[22px] font-bold leading-tight text-[#5d5fef]">
+              US$ 20
+            </span>
+            <span className="text-xs font-medium text-[#616161]">/ month</span>
+          </div>
+
+          <div className="mt-5 space-y-3">
+            {[
+              "Unlimited optimizations",
+              "Advanced automation features",
+              "Cruise Control",
+              "Auto optimize new products",
+            ].map((label) => (
+              <div key={label} className="flex items-center gap-2">
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#e8f5ee] text-[#0f6a3a] shrink-0">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                </span>
+                <span className="text-xs text-[#616161]">{label}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-auto pt-6">
+            {isSuccess ? (
+              <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                Payment successful. Your upgrade is being activated.
+              </p>
+            ) : showPayPal ? (
+              paypalClientId ? (
+                <PayPalCheckout
+                  createSubscription={createSubscription}
+                  onApprove={onApprove}
+                  onPayPalError={onPayPalError}
+                  onLoadFailed={() => setShowPayPal(false)}
+                  isCreatingSubscription={isCreatingSubscription}
+                  isConfirmingSubscription={isConfirmingSubscription}
+                  isRefreshingPlan={isRefreshingPlan}
+                />
+              ) : (
+                <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                  Missing NEXT_PUBLIC_PAYPAL_CLIENT_ID in frontend environment.
+                </p>
+              )
+            ) : (
+              <button type="button" onClick={handleUpgradeToPro} className="custom-btn w-full h-9">
+                Upgrade to Pro
+              </button>
+            )}
+
+            {showPayPal && !isSuccess ? (
+              <button
+                type="button"
+                onClick={() => setShowPayPal(false)}
+                className="btn-outline mt-2 w-full h-9"
+              >
+                Cancel upgrade
+              </button>
+            ) : null}
+
+            {errorMessage ? (
+              <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+                {errorMessage}
+              </p>
+            ) : null}
+
+            {!isSuccess && (
+              <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-[#616161]">
+                <Lock className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                <span>Cancel anytime. No hidden fees.</span>
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }

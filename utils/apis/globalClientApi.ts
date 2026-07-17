@@ -44,6 +44,10 @@ export const createOrderApi = async (amount: string) =>
     await fetchWithAuth("/payment/create-order", { method: "POST", body: JSON.stringify({ amount }) });
 export const captureOrderApi = async (orderID: string) => 
     await fetchWithAuth("/payment/capture-order", { method: "POST", body: JSON.stringify({ orderID }) });
+export const createSubscriptionApi = async () =>
+    await fetchWithAuth("/payment/create-subscription", { method: "POST", body: JSON.stringify({}) });
+export const getSubscriptionStatusApi = async (subscriptionID: string) =>
+    await fetchWithAuth(`/payment/subscription-status/${subscriptionID}`, { method: "GET" });
 export const getRestoreItemsList = async (payload : any) => 
     await fetchWithAuth("/restore/getItems", { method: "POST", body: JSON.stringify(payload) });
 export const restoreItemsApi = async (payload : any) => 
