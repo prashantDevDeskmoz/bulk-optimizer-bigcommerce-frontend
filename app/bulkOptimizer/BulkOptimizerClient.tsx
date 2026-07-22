@@ -39,7 +39,7 @@ const BRAND_VARIABLES: { label: string; token: string }[] = [
 type BulkOptimizerClientProps = {
   initialStoreInfo: StoreInfo | null;
   allInitialTemplates: any[];
-  dashboardInfo: any[] | null;
+  dashboardInfo: any | null;
 };
 
 const STAT_CARDS = (dashboardInfo: any) => {
@@ -345,9 +345,11 @@ export default function BulkOptimizerClient({
         <div className="flex items-center gap-3">
           <ChannelSelector />
 
-          <button onClick={() => router.push("/upgrade")} className="custom-btn">
-            Upgrade
-          </button>
+          {dashboard?.quotaUsed?.planName === "free" && (
+            <button onClick={() => router.push("/upgrade")} className="custom-btn">
+              Upgrade
+            </button>
+          )}
         </div>
       </header>
 
