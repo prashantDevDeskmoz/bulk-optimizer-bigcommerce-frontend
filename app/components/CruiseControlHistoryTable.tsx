@@ -1,12 +1,13 @@
 "use client";
 
-import { getCruiseControlHistory } from "@/utils/apis/globalClientApi";
+import { getCruiseControlHistory, restoreCruiseControlHistoryApi } from "@/utils/apis/globalClientApi";
 import { useDebounce } from "@/utils/customHooks";
 import { Tooltip } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import DataTable, { type TableColumn } from "react-data-table-component";
+import { toast } from "react-toastify";
 
 type CruiseControlHistoryTableProps = {
   maxRows?: number;
@@ -14,6 +15,7 @@ type CruiseControlHistoryTableProps = {
 };
 
 type HistoryRow = Record<string, unknown> & {
+  _id?: string;
   startedAt?: string;
   createdAt?: string;
   completedAt?: string | null;
@@ -23,6 +25,7 @@ type HistoryRow = Record<string, unknown> & {
   target?: string | null;
   status?: string;
   itemName?: string | null;
+  previous?: unknown;
 };
 
 const tableCustomStyles = {
@@ -162,51 +165,6 @@ function getUpdatedItems(row: HistoryRow) {
   return 0;
 }
 
-const columns: TableColumn<HistoryRow>[] = [
-  {
-    name: "Date",
-    selector: (row) => row.completedAt ?? row.startedAt ?? row.createdAt ?? "",
-    cell: (row) => (
-      <span>
-        {formatDateTime(row.completedAt ?? row.startedAt ?? row.createdAt)}
-      </span>
-    ),
-    minWidth: "170px",
-  },
-  {
-    name: "Item Type",
-    selector: (row) => row.resource ?? "",
-    cell: (row) => <span>{formatResource(row.resource)}</span>,
-    width: "120px",
-  },
-  {
-    name: "Template Type",
-    selector: (row) => formatTarget(row.target),
-    cell: (row) => <span>{formatTarget(row.target)}</span>,
-    minWidth: "140px",
-  },
-  {
-    name: "Template Value",
-    selector: (row) => row.template ?? "",
-    cell: (row) => (
-      <span
-        className="block max-w-[360px] whitespace-normal break-words leading-snug"
-        title={row.template ?? ""}
-      >
-        {row.template ?? "—"}
-      </span>
-    ),
-    minWidth: "280px",
-    grow: 2,
-  },
-  {
-    name: "Item Name",
-    selector: (row) => row.itemName ?? "",
-    cell: (row) => <span>{row.itemName ?? "—"}</span>,
-    minWidth: "140px",
-  }
-];
-
 export default function CruiseControlHistoryTable({
   maxRows,
   onHistoryPage = false,
@@ -215,6 +173,7 @@ export default function CruiseControlHistoryTable({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [restoringId, setRestoringId] = useState<string | null>(null);
   const searchText = useDebounce(search);
 
   const isPreview = maxRows != null && maxRows > 0;
@@ -239,6 +198,87 @@ export default function CruiseControlHistoryTable({
     fetchCruiseControlHistory();
   }, []);
 
+  const handleRestore = async (row: HistoryRow) => {
+    const id = row._id;
+    if (!id || restoringId) return;
+    try {
+      setRestoringId(id);
+      const response = await restoreCruiseControlHistoryApi(id);
+      if (!response.status) {
+        toast.error(response.message || "Restore failed");
+        return;
+      }
+      toast.success(response.message || "Restored successfully");
+      setData((prev) => prev.filter((item) => item._id !== id));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Restore failed");
+    } finally {
+      setRestoringId(null);
+    }
+  };
+
+  const columns: TableColumn<HistoryRow>[] = useMemo(
+    () => [
+      {
+        name: "Date",
+        selector: (row) => row.completedAt ?? row.startedAt ?? row.createdAt ?? "",
+        cell: (row) => (
+          <span>
+            {formatDateTime(row.completedAt ?? row.startedAt ?? row.createdAt)}
+          </span>
+        ),
+        minWidth: "170px",
+      },
+      {
+        name: "Item Type",
+        selector: (row) => row.resource ?? "",
+        cell: (row) => <span>{formatResource(row.resource)}</span>,
+        width: "120px",
+      },
+      {
+        name: "Template Type",
+        selector: (row) => formatTarget(row.target),
+        cell: (row) => <span>{formatTarget(row.target)}</span>,
+        minWidth: "140px",
+      },
+      {
+        name: "Template Value",
+        selector: (row) => row.template ?? "",
+        cell: (row) => (
+          <span
+            className="block max-w-[360px] whitespace-normal break-words leading-snug"
+            title={row.template ?? ""}
+          >
+            {row.template ?? "—"}
+          </span>
+        ),
+        minWidth: "280px",
+        grow: 2,
+      },
+      {
+        name: "Item Name",
+        selector: (row) => row.itemName ?? "",
+        cell: (row) => <span>{row.itemName ?? "—"}</span>,
+        minWidth: "140px",
+      },
+      {
+        name: "Action",
+        cell: (row) => (
+          <button
+            type="button"
+            className="custom-btn"
+            disabled={!row._id || !row.previous || restoringId === row._id}
+            onClick={() => handleRestore(row)}
+          >
+            {restoringId === row._id ? "Restoring…" : "Restore"}
+          </button>
+        ),
+        minWidth: "140px",
+      },
+    ],
+    [restoringId],
+  );
+
   const tableData = useMemo(() => {
     const sorted = sortByLatest(data);
 
@@ -257,7 +297,7 @@ export default function CruiseControlHistoryTable({
     <div className="card p-0! mt-4">
       <div className="flex justify-start lg:justify-between items-start md:items-center gap-3 flex-col md:flex-row border-b border-[#DDDDDD] p-4">
         <h2 className="text-base font-bold text-[#303030]">
-          Cruise Control History
+          Auto Seo History
         </h2>
 
         <div className="flex gap-2 flex-col xl:flex-row xl:items-center">
@@ -312,7 +352,7 @@ export default function CruiseControlHistoryTable({
               theme="material"
               noDataComponent={
                 <p className="py-10 text-sm text-[#616161]">
-                  No cruise control history yet.
+                  No auto seo history yet.
                 </p>
               }
             />

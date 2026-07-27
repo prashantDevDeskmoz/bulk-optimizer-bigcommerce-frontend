@@ -36,6 +36,8 @@ export const getDashboardInfoApi = async () =>
     await fetchWithAuth("/bulk/get-dashboard-info", { method: "GET" });
 export const getCruiseControlHistory = async () =>
     await fetchWithAuth("/webhook-histories", { method: "GET" });
+export const restoreCruiseControlHistoryApi = async (id: string) =>
+    await fetchWithAuth("/webhook-histories/restore", { method: "POST", body: JSON.stringify({ id }) });
 export const saveTemplate = async (payload : any) => 
     await fetchWithAuth("/bulk/save-templates", { method: "POST", body: JSON.stringify(payload) });
 export const updateCruiseControl = async (payload : any) => 

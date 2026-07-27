@@ -13,9 +13,12 @@ export default function BulkOptimizerLoading() {
       </header>
 
       <main>
-        <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="card flex items-center gap-4">
+        <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className={`card flex items-center gap-4 ${i === 2 ? "sm:col-span-2 xl:col-span-1" : ""}`}
+            >
               <div className="h-14 w-14 shrink-0 rounded-xl bg-[#ececec]" />
               <div className="flex flex-1 flex-col gap-2">
                 <div className="h-3 w-20 rounded bg-[#ececec]" />

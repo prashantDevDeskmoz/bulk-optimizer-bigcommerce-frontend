@@ -1,12 +1,13 @@
 "use client";
 
-import { getOptimizerHistory } from "@/utils/apis/globalClientApi";
+import { bulkRestoreApi, getOptimizerHistory } from "@/utils/apis/globalClientApi";
 import { useDebounce } from "@/utils/customHooks";
 import { Tooltip } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import DataTable, { type TableColumn } from "react-data-table-component";
+import { toast } from "react-toastify";
 
 type OptimizerHistoryTableProps = {
   maxRows?: number;
@@ -15,6 +16,7 @@ type OptimizerHistoryTableProps = {
 };
 
 type HistoryRow = Record<string, unknown> & {  
+  jobId?: string;
   startedAt?: string;
   createdAt?: string;
   completedAt?: string | null;
@@ -27,6 +29,7 @@ type HistoryRow = Record<string, unknown> & {
   target?: string | null;
   status?: string;
   restoreStatus?: string | null;
+  restorable?: boolean;
   updateType?: string;
 };
 
@@ -79,7 +82,7 @@ const tableCustomStyles = {
 };
 
 const optimizerHistoryGridCols =
-  "grid-cols-[170px_170px_100px_120px_130px_110px_120px_120px_minmax(0,2fr)]";
+  "grid-cols-[170px_170px_100px_120px_130px_110px_120px_120px_minmax(0,2fr)_140px]";
 
 function OptimizerHistoryTableSkeleton({
   rows = 10,
@@ -104,6 +107,7 @@ function OptimizerHistoryTableSkeleton({
         <span>Updated Items</span>
         <span>Status</span>
         <span>Template Value</span>
+        <span>Action</span>
       </div>
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className={rowGridClass}>
@@ -116,6 +120,7 @@ function OptimizerHistoryTableSkeleton({
           <div className="h-4 w-full rounded bg-[#ececec]" />
           <div className="h-6 w-20 rounded-full bg-[#ececec]" />
           <div className="h-4 w-full rounded bg-[#ececec]" />
+          <div className="h-8 w-20 rounded bg-[#ececec]" />
         </div>
       ))}
       {showPagination ? (
@@ -280,6 +285,7 @@ export default function OptimizerHistoryTable({
   const [error, setError] = useState<string | null>(null);
   const [pendingQueque, setPendingQueque] = useState<any[]>([])
   const [search, setSearch] = useState<string>("")
+  const [restoringJobId, setRestoringJobId] = useState<string | null>(null);
   const searchText = useDebounce(search)
 
   const isPreview = maxRows != null && maxRows > 0;
@@ -311,6 +317,58 @@ export default function OptimizerHistoryTable({
   const handleRefresh = () => {
     fetchOptimizerHistory()
   }
+
+  const handleBulkRestore = async (jobId: string) => {
+    try {
+      setRestoringJobId(jobId);
+      const response = await bulkRestoreApi(jobId);
+      if (response.status) {
+        toast.success(response.message ?? "Restore job queued successfully");
+        await fetchOptimizerHistory();
+      } else {
+        toast.error(response.message ?? "Failed to queue restore job");
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to queue restore job",
+      );
+    } finally {
+      setRestoringJobId(null);
+    }
+  };
+
+  const tableColumns: TableColumn<HistoryRow>[] = useMemo(
+    () => [
+      ...columns,
+      {
+        name: "Action",
+        cell: (row) => {
+          if (row.restoreStatus === "pending") {
+            return (
+              <button type="button" className="custom-btn" disabled>
+                Restoring…
+              </button>
+            );
+          }
+          if (!row.restorable || !row.jobId) {
+            return <span className="text-sm text-[#616161]">—</span>;
+          }
+          return (
+            <button
+              type="button"
+              className="custom-btn"
+              disabled={restoringJobId === row.jobId}
+              onClick={() => handleBulkRestore(row.jobId!)}
+            >
+              {restoringJobId === row.jobId ? "Restoring…" : "Restore"}
+            </button>
+          );
+        },
+        minWidth: "140px",
+      },
+    ],
+    [restoringJobId],
+  );
 
  // Derive everything in one chain
  const tableData = useMemo(() => {
@@ -385,7 +443,7 @@ export default function OptimizerHistoryTable({
             />
           ) : (
             <DataTable
-              columns={columns}
+              columns={tableColumns}
               data={tableData}
               pagination={!isPreview}
               paginationPerPage={10}

@@ -4,7 +4,7 @@ import { useChannelContext } from "@/context/ChannelContext";
 import { getDashboardInfoApi, saveTemplate, updateBulkApi, updateCruiseControl } from "@/utils/apis/globalClientApi";
 import type { StoreInfo } from "@/utils/apis/globalServerApi";
 import { getAllProductAndSaveTemplate, getBrandTemplateCache, getCategoryTemplateCache, getProductTemplateCache, setBrandTemplateCache, setCategoryTemplateCache, setProductTemplateCache } from "@/utils/cacheTemplate";
-import { Clock, Package, PieChart, Sparkles, type LucideIcon } from "lucide-react";
+import { Clock, Package, PieChart, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
@@ -45,7 +45,6 @@ type BulkOptimizerClientProps = {
 const STAT_CARDS = (dashboardInfo: any) => {
   return [
     { label: "Products", value: dashboardInfo?.totalProducts ?? "0", icon: Package },
-    { label: "Optimized Items", value: dashboardInfo?.optimizedItemsCount ?? "0", icon: Sparkles },
     { label: "Queue", value: dashboardInfo?.queue ?? "0", icon: Clock },
     { label: "Quota Used", value: (dashboardInfo?.quotaUsed?.usage ?? "0") + "/" + (dashboardInfo?.quotaUsed?.planLimit ?? "∞"), icon: PieChart,
       condition: dashboardInfo?.quotaUsed?.planLimitReached ?? false ,
@@ -58,14 +57,16 @@ function StatCard({
   value,
   icon: Icon,
   condition = false,
+  className = "",
 }: {
   label: string;
   value: string;
   icon: LucideIcon;
   condition?: boolean;
+  className?: string;
 }) {
   return (
-    <div className="card flex items-center gap-4">
+    <div className={`card flex items-center gap-4 ${className}`}>
       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#f1f1f1]">
         <Icon className="h-6 w-6 text-[#303030]" strokeWidth={1.75} aria-hidden />
       </div>
@@ -297,7 +298,7 @@ export default function BulkOptimizerClient({
     applyTo === "products" ? true : id !== "alt",
   );
 
-  const showCruiseControl = applyTo !== "brands" && tab !== "alt";
+  const showCruiseControl = applyTo !== "brands" ;
   const actionBusy = isSavingTemplate || isUpdating;
 
   useEffect(() => {
@@ -355,14 +356,15 @@ export default function BulkOptimizerClient({
 
       <main className="">
         {/* Impact Overview */}
-        <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {STAT_CARDS(dashboard).map((stat) => (
+        <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {STAT_CARDS(dashboard).map((stat, index) => (
             <StatCard
               key={stat.label}
               label={stat.label}
               value={stat.value}
               icon={stat.icon}
               condition={stat.condition}
+              className={index === 2 ? "sm:col-span-2 xl:col-span-1" : undefined}
             />
           ))}
         </section>
@@ -479,7 +481,7 @@ export default function BulkOptimizerClient({
                 <div className="flex min-w-[220px] items-center justify-between gap-4 rounded-lg border border-[#e3e3e3] bg-[#fafafa] px-3.5 py-3">
                   <div>
                     <p className="text-[12px] font-semibold text-[#303030]">
-                      Cruise Control
+                      Auto Seo
                     </p>
                     <p className="mt-0.5 text-xs text-[#616161]">
                       Auto-apply template to new {applyToLabel.toLowerCase()}.

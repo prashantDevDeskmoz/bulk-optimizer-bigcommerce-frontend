@@ -156,7 +156,7 @@ export default function UpgradeClient({ plan , totalOptimizations }: { plan: any
                             </span>
                             <div className="flex items-baseline justify-center gap-1">
                               <span className="text-[22px] font-bold leading-tight text-[#303030]">
-                                US$ 20
+                                US$ 10
                               </span>
                               <span className="text-xs text-[#616161]">/ month</span>
                             </div>
@@ -414,7 +414,7 @@ const ProPlan = () => {
                           </span>
                           <span className="text-xs text-[#616161]">Price</span>
                         </div>
-                        <span className="text-xs font-medium text-[#303030]">US$ 20 / month</span>
+                        <span className="text-xs font-medium text-[#303030]">US$ 10 / month</span>
                       </div>
     
                       <div className="flex items-center justify-between py-3">
@@ -702,7 +702,7 @@ const FreePlan = ({
 
           <div className="mt-5 flex items-baseline gap-1">
             <span className="text-[22px] font-bold leading-tight text-[#5d5fef]">
-              US$ 20
+              US$ 10
             </span>
             <span className="text-xs font-medium text-[#616161]">/ month</span>
           </div>
