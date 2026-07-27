@@ -94,7 +94,7 @@ export default function UpgradeClient({ plan , totalOptimizations }: { plan: any
                 plan.plan.name === "free" ? (
                     <FreePlan
                       totalOptimizations={totalOptimizations}
-                      limit={plan.plan.itemLimit ?? 100}
+                      limit={plan.plan.itemLimit ?? 50}
                       paypalClientId={paypalClientId}
                       createSubscription={createSubscription}
                       onApprove={onApprove}
@@ -145,7 +145,7 @@ export default function UpgradeClient({ plan , totalOptimizations }: { plan: any
                               <span className="text-xs text-[#616161]">/ month</span>
                             </div>
                             <p className="mt-1 text-[11px] text-[#616161]">
-                              {plan.plan.itemLimit ?? 100} Monthly Optimizations
+                              {plan.plan.itemLimit ?? 50} Monthly Optimizations
                             </p>
                           </td>
     
@@ -173,7 +173,7 @@ export default function UpgradeClient({ plan , totalOptimizations }: { plan: any
                             Monthly Optimizations
                           </td>
                           <td className="px-4 py-4 text-center text-[13px] text-[#616161] border-b border-r border-[#e5e5e5]">
-                            <span className="font-medium text-[#616161]">{plan.plan.itemLimit ?? 100}</span>
+                            <span className="font-medium text-[#616161]">{plan.plan.itemLimit ?? 50}</span>
                           </td>
                           <td className="px-4 py-4 text-center text-[13px] border-b border-[#e5e5e5]">
                             <span className="font-medium text-[#166534]">Unlimited</span>
