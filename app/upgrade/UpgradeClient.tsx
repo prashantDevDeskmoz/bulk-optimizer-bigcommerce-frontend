@@ -2,7 +2,7 @@
 
 import { createSubscriptionApi, getSubscriptionStatusApi } from "@/utils/apis/globalClientApi";
 import { PayPalButtons, usePayPalScriptReducer } from "@paypal/react-paypal-js";
-import { Crown, Gift, Lock, Settings, TrendingUp } from "lucide-react";
+import { Crown, Gift, Lock, TrendingUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, useTransition } from "react";
 
@@ -283,7 +283,7 @@ export default function UpgradeClient({ plan , totalOptimizations }: { plan: any
                         <tr className="bg-white">
                           <td className="px-4 py-4 text-[13px] text-[#303030] border-b border-r border-[#e5e5e5]">
                             <div className="flex items-center gap-2">
-                              <span className="whitespace-nowrap">Cruise Control</span>
+                              <span className="whitespace-nowrap">Auto SEO</span>
                               <span
                                 className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full border border-[#c9c9c9] bg-white text-[11px] font-bold leading-none text-[#616161]"
                                 title="More info"
@@ -430,13 +430,13 @@ const ProPlan = () => {
                       </div>
                     </div>
     
-                    <button
+                    {/* <button
                       type="button"
                       className="btn-outline w-full mt-4 h-9 flex items-center justify-center gap-2"
                     >
                       <Settings className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
                       <span>Manage Subscription</span>
-                    </button>
+                    </button> */}
                   </div>
     
                   {/* Divider */}
@@ -711,7 +711,7 @@ const FreePlan = ({
             {[
               "Unlimited optimizations",
               "Advanced automation features",
-              "Cruise Control",
+              "Auto SEO",
               "Auto optimize new products",
             ].map((label) => (
               <div key={label} className="flex items-center gap-2">

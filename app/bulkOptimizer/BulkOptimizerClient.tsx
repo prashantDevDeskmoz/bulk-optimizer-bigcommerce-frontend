@@ -199,7 +199,7 @@ export default function BulkOptimizerClient({
       }
     } catch (e: any) {
       console.error(e);
-      toast.error(e.message || "Failed to update cruise control");
+      toast.error(e.message || "Failed to update auto seo");
     }
   }
 
