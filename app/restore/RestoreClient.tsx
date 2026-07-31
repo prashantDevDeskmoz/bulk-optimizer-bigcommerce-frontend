@@ -253,7 +253,7 @@ export default function RestoreClient() {
   const [page, setPage] = useState(1);
   const [search,setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
-  const [itemType, setItemType] = useState<"product" | "category" | "brand">("product");
+  const [itemType, setItemType] = useState<"product" | "category" | "brand" | "all">("product");
 
   const fetchItems = async () => {
     setProductsLoading(true);
@@ -391,6 +391,7 @@ export default function RestoreClient() {
               <option value="product">Products</option>
               <option value="category">Categories</option>
               <option value="brand">Brands</option>
+              <option value="all">All</option>
             </select>
           </div>
 
