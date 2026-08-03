@@ -19,7 +19,7 @@ const PRODUCT_VARIABLES: { label: string; token: string }[] = [
   { label: "Price", token: "[[price]]" },
   { label: "Currency", token: "[[currency]]" },
   { label: "Type", token: "[[type]]" },
-  { label: "Category Name", token: "[[category name]]" },
+  // { label: "Category Name", token: "[[category name]]" },
   { label: "Brand", token: "[[brand]]" },
   { label: "MPN", token: "[[mpn]]" },
   { label: "Condition", token: "[[condition]]" },
@@ -214,6 +214,7 @@ export default function BulkOptimizerClient({
         applyTo,
         target: tab,
         blanksOnly: saveBlanksOnly,
+        overrideDefault: showToast,
       });
 
       if (response.status) {
@@ -424,7 +425,7 @@ export default function BulkOptimizerClient({
 
               <div className="flex flex-wrap gap-2">
                 {(applyTo === "products"
-                  ? PRODUCT_VARIABLES
+                  ? tab === "alt" ? PRODUCT_VARIABLES.filter(({ token }) => token !== "[[brand]]") : PRODUCT_VARIABLES
                   : applyTo === "categories"
                     ? CATEGORY_VARIABLES
                     : BRAND_VARIABLES
