@@ -20,7 +20,8 @@ import { createPortal } from "react-dom";
 import { toast } from "react-toastify";
 
 type RestoreItem = {
-  _id: number;
+  itemId: number;
+  itemType: "product" | "category" | "brand";
   name: string;
   pageUrl: string;
   capturedAt: string[];
@@ -37,6 +38,10 @@ const TARGET_LABELS: Record<string, string> = {
   meta: "Meta Description",
   alt: "Alt Text",
 };
+
+function rowKey(row: RestoreItem) {
+  return `${row.itemType}-${row.itemId}`;
+}
 
 function buildRestorePoints(row: RestoreItem): RestorePoint[] {
   return row.target
@@ -61,7 +66,13 @@ function formatRestoreLabel(target: string, capturedAt: string) {
 const MENU_MIN_WIDTH = 256;
 
 function RowRestoreDropdown({row, isOpen, onRestore, onOpenChange, disabled}
-  : {row: RestoreItem, isOpen: boolean, onRestore: (itemId: number, target: string) => void, onOpenChange: (open: boolean) => void, disabled: boolean}) {
+  : {
+    row: RestoreItem;
+    isOpen: boolean;
+    onRestore: (itemId: number, target: string, itemType: RestoreItem["itemType"]) => void;
+    onOpenChange: (open: boolean) => void;
+    disabled: boolean;
+  }) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -147,7 +158,7 @@ function RowRestoreDropdown({row, isOpen, onRestore, onOpenChange, disabled}
                 className="block w-full px-4 py-2 text-left text-[12px] text-[#303030] hover:bg-[#f6f6f7]"
                 onClick={() => {
                   onOpenChange(false);
-                  onRestore(row._id, point.target);
+                  onRestore(row.itemId, point.target, row.itemType);
                 }}
               >
                 {formatRestoreLabel(point.target, point.capturedAt)}
@@ -245,7 +256,7 @@ export default function RestoreClient() {
   const [items, setItems] = useState<RestoreItem[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
-  const [openRestoreRowId, setOpenRestoreRowId] = useState<number | null>(null);
+  const [openRestoreRowId, setOpenRestoreRowId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const bcChannelId = selectedChannel?.channel_id ?? 0;
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -290,12 +301,13 @@ export default function RestoreClient() {
   const handleRestore = async (
     itemId: number,
     target: string,
+    restoreItemType: RestoreItem["itemType"],
   ) => {
     try {
       setActionLoading(true);
       const response = await restoreItemsApi({
         itemId,
-        itemType,
+        itemType: restoreItemType,
         target,
       });
       if (response.status) {
@@ -346,9 +358,9 @@ export default function RestoreClient() {
       cell: (row) => (
         <RowRestoreDropdown
           row={row}
-          isOpen={openRestoreRowId === row._id}
+          isOpen={openRestoreRowId === rowKey(row)}
           onOpenChange={(open) =>
-            setOpenRestoreRowId(open ? row._id : null)
+            setOpenRestoreRowId(open ? rowKey(row) : null)
           }
           onRestore={handleRestore}
           disabled={actionLoading}
@@ -387,7 +399,7 @@ export default function RestoreClient() {
         {/* Static toolbar — UI only for now */}
         <div className="flex flex-wrap items-center gap-3 border-b border-[#eeeeee] px-5 py-3">
           <div className="custom-dropi w-[140px]">
-            <select defaultValue="product" className="w-full" onChange={(e) => setItemType(e.target.value as "product" | "category" | "brand")}>
+            <select defaultValue="product" className="w-full" onChange={(e) => setItemType(e.target.value as "product" | "category" | "brand" | "all")}>
               <option value="product">Products</option>
               <option value="category">Categories</option>
               <option value="brand">Brands</option>
