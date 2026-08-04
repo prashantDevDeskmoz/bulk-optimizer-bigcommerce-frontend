@@ -20,6 +20,7 @@ import { createPortal } from "react-dom";
 import { toast } from "react-toastify";
 
 type RestoreItem = {
+  id: string;
   itemId: number;
   itemType: "product" | "category" | "brand";
   name: string;
@@ -39,8 +40,34 @@ const TARGET_LABELS: Record<string, string> = {
   alt: "Alt Text",
 };
 
+function normalizeRestoreItem(row: any): RestoreItem | null {
+  const itemId =
+    typeof row?.itemId === "number"
+      ? row.itemId
+      : typeof row?._id === "object" && row._id != null
+        ? row._id.itemId
+        : typeof row?._id === "number"
+          ? row._id
+          : null;
+  const itemType =
+    row?.itemType ??
+    (typeof row?._id === "object" && row._id != null ? row._id.itemType : null);
+
+  if (itemId == null || !itemType) return null;
+
+  return {
+    id: `${itemType}-${itemId}`,
+    itemId,
+    itemType,
+    name: row.name ?? "",
+    pageUrl: row.pageUrl ?? "",
+    capturedAt: Array.isArray(row.capturedAt) ? row.capturedAt : [],
+    target: Array.isArray(row.target) ? row.target : [],
+  };
+}
+
 function rowKey(row: RestoreItem) {
-  return `${row.itemType}-${row.itemId}`;
+  return row.id;
 }
 
 function buildRestorePoints(row: RestoreItem): RestorePoint[] {
@@ -276,7 +303,10 @@ export default function RestoreClient() {
     search: debouncedSearch,
   })
     .then((res) => {
-      setItems(Array.isArray(res.data) ? res.data : []);
+      const normalized = (Array.isArray(res.data) ? res.data : [])
+        .map(normalizeRestoreItem)
+        .filter((row: any): row is RestoreItem => row != null);
+      setItems(normalized);
       setTotalItems(res.total ?? 0);
       setProductsError(null);
     })
@@ -429,6 +459,7 @@ export default function RestoreClient() {
           <DataTable
             columns={itemColumns}
             data={items}
+            keyField="id"
             pagination
             paginationServer
             paginationPage={page}
